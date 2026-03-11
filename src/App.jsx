@@ -29,7 +29,7 @@ const injectStyles = () => {
     body, html { background: var(--bg); color: var(--text-main); font-family: var(--font-mono); font-size: 14px; margin: 0; padding: 0; overflow-x: hidden; }
     h1, h2, h3, .heading-font { font-family: var(--font-heading); font-weight: 700; margin: 0; }
     
-    .app-container { min-height: 100vh; position: relative; padding-bottom: 4rem; }
+    .app-container { min-height: 100vh; position: relative; z-index: 1; padding-bottom: 4rem; }
     .glow-tl { position: absolute; top: -150px; left: -150px; width: 500px; height: 500px; background: radial-gradient(circle, rgba(34,211,165,0.15) 0%, transparent 70%); z-index: -1; pointer-events: none; }
     .glow-br { position: absolute; bottom: -150px; right: -150px; width: 500px; height: 500px; background: radial-gradient(circle, rgba(251,191,36,0.1) 0%, transparent 70%); z-index: -1; pointer-events: none; }
 
@@ -138,12 +138,40 @@ const injectStyles = () => {
     .class-form { background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 6px; border: 1px dashed var(--border); margin-top: 1rem; animation: fadeIn 0.3s ease; }
 
     .tilt-card { transform-style: preserve-3d; transition: transform 0.4s ease; position: relative; }
-    .tilt-shine { position: absolute; top:0; left:0; right:0; bottom:0; pointer-events:none; border-radius:inherit; }
+    .tilt-content { transform: translateZ(30px); transform-style: preserve-3d; height: 100%; transition: transform 0.4s ease; }
+    .tilt-shine { position: absolute; top:0; left:0; right:0; bottom:0; pointer-events:none; border-radius:inherit; transform: translateZ(1px); }
     .ripple-circle { position: absolute; border-radius: 50%; transform: scale(0); animation: ripple 400ms linear; background: rgba(255,255,255,0.3); pointer-events: none; }
     @keyframes ripple { to { transform: scale(4); opacity: 0; } }
-    .pal-btn-wrap { display: inline-block; position: relative; overflow: hidden; border-radius: 8px; }
+    .pal-btn-wrap { display: inline-block; position: relative; overflow: hidden; border-radius: 8px; transform: translateZ(10px); }
     .pal-btn-wrap button { transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); width:100%; height:100%; border-radius:inherit; }
     .pal-btn-wrap:active button { transform: scale(0.88); }
+    
+    .floating-layer { position: absolute; inset:0; z-index: 1; pointer-events: none; overflow: hidden; transform-style: preserve-3d; perspective: 1000px; }
+    .geo-shape { position: absolute; transform-style: preserve-3d; animation: floatShape linear infinite; }
+    .geo-cube { width: 40px; height: 40px; }
+    .geo-face { position: absolute; width: 100%; height: 100%; border: 1px solid rgba(34,211,165,0.15); background: rgba(15,22,35,0.1); box-shadow: inset 0 0 15px rgba(34,211,165,0.05); }
+    .geo-cube .front  { transform: rotateY(  0deg) translateZ(20px); }
+    .geo-cube .back   { transform: rotateY(180deg) translateZ(20px); }
+    .geo-cube .right  { transform: rotateY( 90deg) translateZ(20px); }
+    .geo-cube .left   { transform: rotateY(-90deg) translateZ(20px); }
+    .geo-cube .top    { transform: rotateX( 90deg) translateZ(20px); }
+    .geo-cube .bottom { transform: rotateX(-90deg) translateZ(20px); }
+
+    .geo-pyramid { width: 40px; height: 40px; }
+    .geo-pyr-face { position: absolute; border-left: 20px solid transparent; border-right: 20px solid transparent; border-bottom: 40px solid rgba(15,22,35,0.1); filter: drop-shadow(0 0 2px rgba(103,232,249,0.3));}
+    .geo-pyr-face::after { content: ''; position: absolute; top: 0; left: -20px; border-left: 20px solid transparent; border-right: 20px solid transparent; border-bottom: 40px solid transparent; border-bottom-color: rgba(103,232,249,0.15); }
+    .geo-pyramid .front { transform: translateZ(11.5px) rotateX(30deg); transform-origin: 50% 100%; }
+    .geo-pyramid .back  { transform: translateZ(-11.5px) rotateY(180deg) rotateX(30deg); transform-origin: 50% 100%; }
+    .geo-pyramid .right { transform: translateX(11.5px) rotateY(90deg) rotateX(30deg); transform-origin: 50% 100%; }
+    .geo-pyramid .left  { transform: translateX(-11.5px) rotateY(-90deg) rotateX(30deg); transform-origin: 50% 100%; }
+    .geo-pyramid .bottom{ position: absolute; width: 40px; height: 40px; background: rgba(15,22,35,0.1); border: 1px solid rgba(103,232,249,0.15); transform: rotateX(-90deg) translateZ(20px); bottom: -20px;}
+
+    @keyframes floatShape {
+        0%   { transform: translateY(120vh) rotateX(0deg) rotateY(0deg) rotateZ(0deg); opacity: 0; }
+        10%  { opacity: 1; }
+        90%  { opacity: 1; }
+        100% { transform: translateY(-20vh) rotateX(720deg) rotateY(360deg) rotateZ(180deg); opacity: 0; }
+    }
     .calendar-heatmap { display: flex; gap: 3px; overflow-x: auto; padding-bottom: 1rem; scrollbar-width: none; }
     .calendar-heatmap::-webkit-scrollbar { display: none; }
     .calendar-col { display: flex; flex-direction: column; gap: 3px; }
@@ -344,7 +372,9 @@ function TiltCard({ children, className = '', style = {} }) {
     
     return (
         <div ref={cardRef} className={`tilt-card ${className}`} style={style} onMouseMove={onMouseMove} onMouseLeave={onMouseLeave}>
-            {children}
+            <div className="tilt-content">
+                {children}
+            </div>
             <div className="tilt-shine" style={{ background: `radial-gradient(circle at ${shine.x}% ${shine.y}%, rgba(255,255,255,1) 0%, transparent 60%)`, opacity: shine.opacity }} />
         </div>
     );
@@ -595,6 +625,281 @@ function CalendarHeatmap({ dailyLog }) {
 }
 
 // ----------------------------------------------------------------------
+function useAuroraBackground(canvasRef) {
+    useEffect(() => {
+        const isReduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (isReduced) return;
+        
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d', { willReadFrequently: false });
+        let frameId;
+        let time = 0;
+        
+        const resize = () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        };
+        window.addEventListener('resize', resize);
+        resize();
+        
+        const colors = [
+            'rgba(34,211,165,0.07)',
+            'rgba(103,232,249,0.06)',
+            'rgba(167,139,250,0.05)',
+            'rgba(34,211,165,0.04)',
+            'rgba(251,191,36,0.03)'
+        ];
+        const speeds = [0.0003, 0.0004, 0.0002, 0.0005, 0.00035];
+        
+        const draw = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            time += 16;
+            
+            for (let i = 0; i < 5; i++) {
+                ctx.fillStyle = colors[i];
+                ctx.beginPath();
+                
+                const baseY = canvas.height * (0.2 + i * 0.08);
+                ctx.moveTo(0, canvas.height);
+                ctx.lineTo(0, baseY);
+                
+                const segments = 4;
+                const segWidth = canvas.width / segments;
+                
+                for (let j = 0; j < segments; j++) {
+                    const x1 = j * segWidth;
+                    const x2 = (j + 1) * segWidth;
+                    
+                    const cp1x = x1 + segWidth / 2;
+                    const cp1y = baseY + Math.sin(time * speeds[i] + j + i) * 80;
+                    
+                    const cp2x = x2 - segWidth / 2;
+                    const cp2y = baseY + Math.cos(time * speeds[i] + j + i + 1) * 80;
+                    
+                    const endY = baseY + Math.sin(time * speeds[i] + (j + 1) + i) * 80;
+                    
+                    ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x2, endY);
+                }
+                
+                ctx.lineTo(canvas.width, canvas.height);
+                ctx.closePath();
+                ctx.fill();
+            }
+            frameId = requestAnimationFrame(draw);
+        };
+        frameId = requestAnimationFrame(draw);
+        
+        return () => {
+            window.removeEventListener('resize', resize);
+            cancelAnimationFrame(frameId);
+        };
+    }, [canvasRef]);
+}
+
+function useNeuralBackground(canvasRef) {
+    const nodesRef = useRef([]);
+    const pulsesRef = useRef([]);
+    const flashRef = useRef({ nodeIndex: -1, startTime: 0, duration: 600 });
+    const lastPulseTimeRef = useRef(0);
+    const lastFlashTimeRef = useRef(0);
+
+    useEffect(() => {
+        const isReduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (isReduced) return;
+        
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d', { willReadFrequently: false });
+        let frameId;
+        
+        const isMobile = window.innerWidth < 768;
+        const numNodes = isMobile ? 30 : 55;
+        
+        const resize = () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            if (nodesRef.current.length === 0) {
+                const nodes = [];
+                for (let i = 0; i < numNodes; i++) {
+                    nodes.push({
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * canvas.height,
+                        vx: (Math.random() - 0.5) * 0.5,
+                        vy: (Math.random() - 0.5) * 0.5,
+                        radius: 1.8,
+                        pulsePhase: Math.random() * Math.PI * 2,
+                        pulseSpeed: 0.02 + Math.random() * 0.02
+                    });
+                }
+                nodesRef.current = nodes;
+            }
+        };
+        window.addEventListener('resize', resize);
+        resize();
+        
+        const draw = (timestamp) => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const nodes = nodesRef.current;
+            const pulses = pulsesRef.current;
+            const flash = flashRef.current;
+            
+            if (!lastPulseTimeRef.current) lastPulseTimeRef.current = timestamp;
+            if (!lastFlashTimeRef.current) lastFlashTimeRef.current = timestamp;
+            
+            for (let i = 0; i < nodes.length; i++) {
+                const n = nodes[i];
+                n.x += n.vx;
+                n.y += n.vy;
+                
+                if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
+                if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
+                n.pulsePhase += n.pulseSpeed;
+            }
+            
+            ctx.lineWidth = 0.8;
+            const connectedPairs = [];
+            for (let i = 0; i < nodes.length; i++) {
+                for (let j = i + 1; j < nodes.length; j++) {
+                    const dx = nodes[i].x - nodes[j].x;
+                    const dy = nodes[i].y - nodes[j].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (dist < 130) {
+                        ctx.strokeStyle = `rgba(34,211,165,${(1 - dist / 130) * 0.15})`;
+                        ctx.beginPath();
+                        ctx.moveTo(nodes[i].x, nodes[i].y);
+                        ctx.lineTo(nodes[j].x, nodes[j].y);
+                        ctx.stroke();
+                        connectedPairs.push([i, j]);
+                    }
+                }
+            }
+            
+            if (!isMobile && timestamp - lastPulseTimeRef.current > 2500) {
+                lastPulseTimeRef.current = timestamp;
+                if (connectedPairs.length > 0 && pulses.length < 6) {
+                    const pair = connectedPairs[Math.floor(Math.random() * connectedPairs.length)];
+                    pulses.push({
+                        aIdx: pair[0],
+                        bIdx: pair[1],
+                        progress: 0,
+                        active: true
+                    });
+                }
+            }
+            
+            if (timestamp - lastFlashTimeRef.current > 4000) {
+                lastFlashTimeRef.current = timestamp;
+                flash.nodeIndex = Math.floor(Math.random() * nodes.length);
+                flash.startTime = timestamp;
+                flash.duration = 600;
+            }
+            
+            for (let i = pulses.length - 1; i >= 0; i--) {
+                const p = pulses[i];
+                p.progress += 0.016;
+                
+                if (p.progress >= 1) {
+                    pulses.splice(i, 1);
+                    continue;
+                }
+                
+                const nA = nodes[p.aIdx];
+                const nB = nodes[p.bIdx];
+                // Failsafe in case aIdx or bIdx are mysteriously out of bounds due to resize
+                if (!nA || !nB) {
+                    pulses.splice(i, 1);
+                    continue;
+                }
+                const px = nA.x + (nB.x - nA.x) * p.progress;
+                const py = nA.y + (nB.y - nA.y) * p.progress;
+                
+                ctx.save();
+                ctx.fillStyle = 'rgba(103,232,249,0.8)';
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#67e8f9';
+                ctx.beginPath();
+                ctx.arc(px, py, 3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+            
+            for (let i = 0; i < nodes.length; i++) {
+                const n = nodes[i];
+                const currentRadius = n.radius + Math.sin(n.pulsePhase) * 0.8;
+                const opacity = 0.5 + 0.2 * Math.sin(n.pulsePhase);
+                
+                ctx.save();
+                if (flash.nodeIndex === i && timestamp - flash.startTime < flash.duration) {
+                    ctx.fillStyle = 'rgba(34,211,165,0.9)';
+                    ctx.shadowBlur = 20;
+                    ctx.shadowColor = '#22d3a5';
+                    ctx.beginPath();
+                    ctx.arc(n.x, n.y, n.radius * 3, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    ctx.fillStyle = `rgba(34,211,165,${opacity})`;
+                    ctx.beginPath();
+                    ctx.arc(n.x, n.y, Math.max(0, currentRadius), 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
+            
+            frameId = requestAnimationFrame(draw);
+        };
+        frameId = requestAnimationFrame(draw);
+        
+        return () => {
+            window.removeEventListener('resize', resize);
+            cancelAnimationFrame(frameId);
+        };
+    }, [canvasRef]);
+}
+
+function FloatingShapes() {
+    const isReduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (isReduced) return null;
+
+    const shapes = [
+        { id: 1, type: 'cube', left: '15%', speed: '25s', delay: '0s', scale: 0.8 },
+        { id: 2, type: 'pyramid', left: '85%', speed: '30s', delay: '4s', scale: 1.2 },
+        { id: 3, type: 'cube', left: '50%', speed: '35s', delay: '8s', scale: 0.6 },
+        { id: 4, type: 'pyramid', left: '25%', speed: '28s', delay: '12s', scale: 1 },
+        { id: 5, type: 'cube', left: '75%', speed: '32s', delay: '16s', scale: 0.9 }
+    ];
+
+    return (
+        <div className="floating-layer">
+            {shapes.map(s => (
+                <div key={s.id} className={`geo-shape geo-${s.type}`} style={{ left: s.left, animationDuration: s.speed, animationDelay: s.delay, transform: `scale(${s.scale})` }}>
+                    {s.type === 'cube' ? (
+                        <>
+                            <div className="geo-face front"></div>
+                            <div className="geo-face back"></div>
+                            <div className="geo-face right"></div>
+                            <div className="geo-face left"></div>
+                            <div className="geo-face top"></div>
+                            <div className="geo-face bottom"></div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="geo-pyr-face front"></div>
+                            <div className="geo-pyr-face back"></div>
+                            <div className="geo-pyr-face right"></div>
+                            <div className="geo-pyr-face left"></div>
+                            <div className="geo-pyr-face bottom"></div>
+                        </>
+                    )}
+                </div>
+            ))}
+        </div>
+    );
+}
+
 export default function App() {
   useEffect(() => { injectStyles(); }, []);
 
@@ -608,6 +913,11 @@ export default function App() {
   
   const saveTimeout = useRef(null);
   const isFirstLoad = useRef(true);
+  
+  const auroraRef = useRef(null);
+  const neuralRef = useRef(null);
+  useAuroraBackground(auroraRef);
+  useNeuralBackground(neuralRef);
 
   // Auto-dismiss toast
   useEffect(() => {
@@ -797,6 +1107,11 @@ export default function App() {
   if (!user && supabase && SUPABASE_URL && SUPABASE_KEY && isLoading === false) {
     return (
       <div className="login-container">
+        <div style={{ position:'fixed', inset:0, zIndex:0, pointerEvents:'none' }}>
+          <canvas ref={auroraRef} id="aurora-canvas" style={{ position:'absolute', inset:0, width:'100%', height:'100%' }} />
+          <canvas ref={neuralRef} id="neural-canvas" style={{ position:'absolute', inset:0, width:'100%', height:'100%', zIndex:1 }} />
+          <FloatingShapes />
+        </div>
         <div className="glow-tl"></div><div className="glow-br"></div>
         <div className="login-box">
           <div className="heading-font title mb-2 text-teal" style={{ fontSize: '2rem' }}>ATTENDR</div>
@@ -815,7 +1130,11 @@ export default function App() {
 
   return (
     <div className="app-container">
-      <ParticleBackground />
+      <div style={{ position:'fixed', inset:0, zIndex:0, pointerEvents:'none' }}>
+        <canvas ref={auroraRef} id="aurora-canvas" style={{ position:'absolute', inset:0, width:'100%', height:'100%' }} />
+        <canvas ref={neuralRef} id="neural-canvas" style={{ position:'absolute', inset:0, width:'100%', height:'100%', zIndex:1 }} />
+        <FloatingShapes />
+      </div>
       <div className="glow-tl"></div><div className="glow-br"></div>
       
       <header className="header">
