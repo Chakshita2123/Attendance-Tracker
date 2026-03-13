@@ -998,12 +998,7 @@ export default function App() {
           // If no row, create one
           await supabase.from('attendance_data').insert([{
             user_id: user.id,
-            subjects: [],
-            timetable: DEFAULT_DATA.timetable,
-            attendance: {},
-            daily_log: {},
-            phase: 'setup',
-            lecture_settings: { durationMinutes: 60 },
+            ...DEFAULT_DATA,
             updated_at: new Date().toISOString()
           }]);
           setData(DEFAULT_DATA);
@@ -1523,23 +1518,23 @@ function TrackerTab({ data, pushUndo, handleUndo, undoStack, showToast }) {
     return (
         <div>
            <ConfettiOverlay trigger={is100Percent} />
-           <div className="stat-grid">
-               <TiltCard className="stat-box">
+           <div className="stat-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"1rem",marginBottom:"1.5rem"}}>
+               <TiltCard className="stat-box" style={{background:"#0f1623",border:"1px solid #1e293b",borderRadius:"12px",padding:"1.5rem"}}>
                    <div className="stat-label">Total Today</div>
                    <div className="stat-value"><AnimatedNumber value={totalSubsToday} /></div>
                </TiltCard>
-               <TiltCard className="stat-box">
+               <TiltCard className="stat-box" style={{background:"#0f1623",border:"1px solid #1e293b",borderRadius:"12px",padding:"1.5rem"}}>
                    <div className="stat-label text-teal">Present</div>
                    <div className="stat-value text-teal"><AnimatedNumber value={presentToday} /></div>
                </TiltCard>
-               <TiltCard className="stat-box">
+               <TiltCard className="stat-box" style={{background:"#0f1623",border:"1px solid #1e293b",borderRadius:"12px",padding:"1.5rem"}}>
                    <div className="stat-label text-amber" style={{gap: '0.2rem'}}><TrendingUp size={14}/> Streak</div>
                    <div className="stat-value text-amber"><AnimatedNumber value={calculateStreak()} /> 🔥</div>
                </TiltCard>
            </div>
 
            <div className="card" style={{padding: '0'}}>
-                <div className="day-tabs">
+                <div className="day-tabs" style={{display:"flex",flexDirection:"row",overflowX:"auto",borderBottom:"1px solid #1e293b"}}>
                     {recentDays.map(rd => (
                         <div key={rd.date} 
                             className={`day-tab ${selectedDate === rd.date ? 'active' : ''}`}
@@ -1678,18 +1673,18 @@ function AnalyticsTab({ data }) {
 
     return (
         <div>
-            <div className="stat-grid">
-                <TiltCard className="stat-box">
+            <div className="stat-grid" style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"1rem",marginBottom:"1.5rem"}}>
+                <TiltCard className="stat-box" style={{background:"#0f1623",border:"1px solid #1e293b",borderRadius:"12px",padding:"1.5rem"}}>
                     <div className="stat-label">Overall %</div>
                     <div className="stat-value" style={{color: overallPerc >= 75 ? 'var(--teal)' : 'var(--red)'}}>
                         <AnimatedNumber value={overallPerc} />%
                     </div>
                 </TiltCard>
-                <TiltCard className="stat-box">
+                <TiltCard className="stat-box" style={{background:"#0f1623",border:"1px solid #1e293b",borderRadius:"12px",padding:"1.5rem"}}>
                     <div className="stat-label">Days Tracked</div>
                     <div className="stat-value"><AnimatedNumber value={dates.length} /></div>
                 </TiltCard>
-                <TiltCard className="stat-box">
+                <TiltCard className="stat-box" style={{background:"#0f1623",border:"1px solid #1e293b",borderRadius:"12px",padding:"1.5rem"}}>
                     <div className="stat-label">Subjects</div>
                     <div className="stat-value"><AnimatedNumber value={data.subjects.length} /></div>
                 </TiltCard>
