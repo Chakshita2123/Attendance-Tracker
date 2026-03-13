@@ -3,14 +3,16 @@ import { createClient } from '@supabase/supabase-js';
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { CheckCircle, Circle, AlertCircle, TrendingUp, LogOut, RotateCcw, Play, CheckSquare, Trash2, Calendar, Settings, Activity } from 'lucide-react';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const supabase = (SUPABASE_URL && SUPABASE_KEY) ? createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
 // Ensure we have a style tag
-function GlobalStyles() {
-    return (
-        <style>{`
+const injectStyles = () => {
+  if (document.getElementById('attendr-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'attendr-styles';
+  style.innerHTML = `
     :root {
       --bg: #080c14;
       --card: #0f1623;
@@ -36,19 +38,15 @@ function GlobalStyles() {
     .title-accent { color: var(--teal); }
 
     .sync-indicator { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--text-muted); }
-    .sync-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
-    .sync-dot.synced { background: #22d3ee; box-shadow: 0 0 10px #22d3ee; } /* Cyan for synced */
-    .sync-dot.syncing { background: #fbbf24; box-shadow: 0 0 10px #fbbf24; animation: pulse 1s infinite alternate; }
-    .sync-dot.error { background: #f87171; box-shadow: 0 0 10px #f87171; }
-    .sync-dot.green { background: #22d3a5; box-shadow: 0 0 10px #22d3a5; }
-
-    @keyframes pulse { from { opacity: 0.4; transform: scale(0.9); } to { opacity: 1; transform: scale(1.1); } }
+    .sync-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .sync-dot.synced { background: var(--teal); box-shadow: 0 0 8px var(--teal); }
+    .sync-dot.syncing { background: var(--amber); box-shadow: 0 0 8px var(--amber); animation: pulse 1s infinite alternate; }
+    .sync-dot.offline { background: var(--red); box-shadow: 0 0 8px var(--red); }
+    @keyframes pulse { from { opacity: 0.4; } to { opacity: 1; } }
 
     .user-sect { display: flex; align-items: center; gap: 1rem; }
-    .avatar { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: var(--card); overflow: hidden; display: flex; align-items: center; justify-content: center;}
+    .avatar { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border); background: var(--card); overflow: hidden; display: flex; align-items: center; justify-content: center;}
     .avatar img { width: 100%; height: 100%; object-fit: cover; }
-    .user-info { display: flex; flex-direction: column; align-items: flex-end; }
-    .user-name { font-size: 0.85rem; font-weight: bold; color: var(--text-main); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     .nav-tabs { display: flex; gap: 0.25rem; background: var(--card); padding: 0.25rem; border-radius: 2rem; border: 1px solid var(--border); margin: 2rem auto; width: fit-content; }
     .nav-tabs button { background: transparent; border: none; color: var(--text-muted); padding: 0.6rem 1.5rem; border-radius: 2rem; cursor: pointer; font-family: var(--font-mono); font-weight: 500; transition: all 0.2s; display: flex; align-items: center; gap: 0.5rem; }
@@ -62,8 +60,8 @@ function GlobalStyles() {
     .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; margin-bottom: 1.5rem; position: relative; overflow: hidden; }
     .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
     
-    .btn { background: #0c121d; border: 1px solid var(--border); color: var(--text-main); padding: 0.6rem 1.2rem; border-radius: 8px; cursor: pointer; font-family: var(--font-mono); display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s; font-size: 0.9rem; }
-    .btn:hover:not(:disabled) { border-color: var(--teal); background: #131b2b; }
+    .btn { background: var(--bg); border: 1px solid var(--border); color: var(--text-main); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-family: var(--font-mono); display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s; }
+    .btn:hover:not(:disabled) { border-color: var(--text-muted); }
     .btn-primary { background: var(--teal); color: var(--bg); border-color: var(--teal); font-weight: 700; }
     .btn-primary:hover:not(:disabled) { background: #1eb38c; border-color: #1eb38c; box-shadow: 0 0 15px rgba(34,211,165,0.3); }
     .btn-danger { color: var(--red); border-color: rgba(248,113,113,0.3); background: rgba(248,113,113,0.05); }
@@ -71,24 +69,63 @@ function GlobalStyles() {
     .btn-outline { background: transparent; }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .input-field { background: #05080f; border: 1px solid var(--border); color: var(--text-main); padding: 0.85rem 1rem; border-radius: 8px; font-family: var(--font-mono); width: 100%; outline: none; transition: all 0.2s; margin-bottom: 1rem; }
-    .input-field:focus { border-color: var(--teal); background: #0a0f1a; box-shadow: 0 0 10px rgba(34,211,165,0.1); }
+    .input-field { background: #05080f; border: 1px solid var(--border); color: var(--text-main); padding: 0.75rem 1rem; border-radius: 6px; font-family: var(--font-mono); width: 100%; outline: none; transition: border 0.2s; margin-bottom: 1rem; }
+    .input-field:focus { border-color: var(--teal); }
 
-    .login-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: var(--bg); position: relative; z-index: 100; overflow: hidden; }
-    .login-box { background: rgba(15, 22, 35, 0.8); backdrop-filter: blur(20px); border: 1px solid var(--border); padding: 3rem; border-radius: 20px; text-align: center; max-width: 420px; width: 90%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); position: relative; z-index: 10; animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1); }
-    @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1rem; }
+    .tag { display: inline-flex; align-items: center; gap: 0.5rem; background: rgba(30, 41, 59, 0.5); border: 1px solid var(--border); padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.85rem; }
+    .tag button { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0; display: flex; align-items: center; transition: color 0.2s; }
+    .tag button:hover { color: var(--red); }
+
+    .day-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; overflow-x: auto; scrollbar-width: none; }
+    .day-tabs::-webkit-scrollbar { display: none; }
+    .day-tab { padding: 0.75rem 1.5rem; cursor: pointer; border-bottom: 2px solid transparent; color: var(--text-muted); transition: all 0.2s; white-space: nowrap; }
+    .day-tab:hover { color: var(--text-main); }
+    .day-tab.active { color: var(--teal); border-bottom-color: var(--teal); font-weight: bold; }
+
+    .subject-row { display: flex; justify-content: space-between; align-items: center; padding: 1rem 0; border-bottom: 1px dashed var(--border); }
+    .subject-row:last-child { border-bottom: none; }
     
-    .login-divider { display: flex; align-items: center; margin: 1.5rem 0; color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 2px; }
-    .login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-    .login-divider::before { margin-right: 1rem; }
-    .login-divider::after { margin-left: 1rem; }
+    .status-group { display: flex; gap: 0.5rem; }
+    .status-btn { width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text-muted); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; font-family: var(--font-heading); font-size: 1.2rem; }
+    .status-btn:hover { border-color: var(--text-muted); }
+    .status-btn.selected-P { border-color: var(--teal); color: var(--teal); background: rgba(34,211,165,0.1); box-shadow: inset 0 0 10px rgba(34,211,165,0.1); }
+    .status-btn.selected-A { border-color: var(--red); color: var(--red); background: rgba(248,113,113,0.1); box-shadow: inset 0 0 10px rgba(248,113,113,0.1); }
+    .status-btn.selected-L { border-color: var(--amber); color: var(--amber); background: rgba(251,191,36,0.1); box-shadow: inset 0 0 10px rgba(251,191,36,0.1); }
 
-    .loading-overlay { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
-    .spinner { width: 50px; height: 50px; border: 3px solid rgba(34,211,165,0.1); border-top-color: var(--teal); border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 1.5rem; box-shadow: 0 0 15px rgba(34,211,165,0.2); }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .loading-text { font-family: var(--font-heading); color: var(--teal); letter-spacing: 2px; font-weight: bold; font-size: 0.9rem; animation: pulse 1.5s infinite alternate; }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .stat-box { background: var(--card); border: 1px solid var(--border); padding: 1.5rem; border-radius: 12px; text-align: center; }
+    .stat-value { font-family: var(--font-heading); font-size: 2.5rem; margin-top: 0.5rem; }
+    .stat-label { color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
 
-    .error-banner { background: rgba(248, 113, 113, 0.1); border: 1px solid var(--red); color: var(--red); padding: 0.8rem; border-radius: 8px; font-size: 0.85rem; margin-bottom: 1.5rem; text-align: left; display: flex; align-items: flex-start; gap: 0.5rem; }
+    .heatmap { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 1rem; }
+    .heatmap-cell { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-family: var(--font-mono); font-weight: bold; border: 1px solid rgba(255,255,255,0.05); }
+    .cell-grey { background: rgba(30, 41, 59, 0.5); color: transparent; }
+    .cell-red { background: rgba(248,113,113,0.2); color: var(--red); border-color: rgba(248,113,113,0.4); }
+    .cell-yellow { background: rgba(251,191,36,0.2); color: var(--amber); border-color: rgba(251,191,36,0.4); }
+    .cell-green { background: rgba(34,211,165,0.2); color: var(--teal); border-color: rgba(34,211,165,0.4); }
+
+    .progress-wrapper { margin-bottom: 2rem; }
+    .progress-header { display: flex; justify-content: space-between; margin-bottom: 0.5rem; font-family: var(--font-heading); }
+    .progress-bar { height: 8px; background: #05080f; border-radius: 4px; border: 1px solid var(--border); overflow: hidden; margin-bottom: 0.75rem;}
+    .progress-fill { height: 100%; transition: width 0.5s ease; }
+    .fill-red { background: var(--red); }
+    .fill-yellow { background: var(--amber); }
+    .fill-green { background: var(--teal); }
+    
+    .banner { padding: 0.75rem 1rem; border-radius: 6px; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem; }
+    .banner-red { background: rgba(248,113,113,0.1); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+    .banner-green { background: rgba(34,211,165,0.1); color: var(--teal); border: 1px solid rgba(34,211,165,0.2); }
+
+    .toast { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--card); border: 1px solid var(--border); padding: 1rem 2rem; border-radius: 30px; display: flex; align-items: center; gap: 0.75rem; box-shadow: 0 10px 30px rgba(0,0,0,0.5); opacity: 0; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 1000; font-family: var(--font-mono); }
+    .toast.visible { transform: translateX(-50%) translateY(0); opacity: 1; }
+    .toast.success { border-color: var(--teal); color: var(--teal); }
+    .toast.info { border-color: var(--amber); color: var(--text-main); }
+    .toast.error { border-color: var(--red); color: var(--red); }
+
+    .login-container { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; background: var(--bg); position: relative; z-index: 10; }
+    .login-box { background: var(--card); border: 1px solid var(--border); padding: 3rem; border-radius: 12px; text-align: center; max-width: 400px; width: 90%; box-shadow: 0 20px 40px rgba(0,0,0,0.4); position: relative; overflow: hidden;}
+    .login-box::before { content: ''; position: absolute; top:0; left:0; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, var(--teal), transparent); }
     
     .flex-between { display: flex; justify-content: space-between; align-items: center; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
@@ -155,57 +192,9 @@ function GlobalStyles() {
     .checkbox-label:hover { background: rgba(30,41,59,0.6); }
     .checkbox-label input { accent-color: var(--teal); width: 16px; height: 16px; cursor: pointer; }
     .checkbox-label.checked { border-color: var(--teal); color: var(--teal); }
-    /* STAT GRID - tracker + analytics ke cards */
-    .stat-grid { display: grid !important; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important; gap: 1rem !important; margin-bottom: 1.5rem !important; }
-    .stat-box { background: var(--card) !important; border: 1px solid var(--border) !important; border-radius: 12px !important; padding: 1.5rem !important; position: relative !important; overflow: hidden !important; }
-    .stat-label { font-size: 0.7rem !important; color: var(--text-muted) !important; letter-spacing: 2px !important; text-transform: uppercase !important; margin-bottom: 0.5rem !important; display: flex !important; align-items: center !important; gap: 0.3rem !important; }
-    .stat-value { font-family: var(--font-heading) !important; font-size: 2rem !important; font-weight: 800 !important; line-height: 1.1 !important; }
-
-    /* TAG LIST - setup subject chips */
-    .tag-list { display: flex !important; flex-wrap: wrap !important; gap: 0.5rem !important; min-height: 2rem !important; }
-    .tag { display: inline-flex !important; align-items: center !important; gap: 0.5rem !important; padding: 0.4rem 0.8rem !important; background: rgba(34,211,165,0.1) !important; border: 1px solid rgba(34,211,165,0.3) !important; border-radius: 20px !important; color: var(--teal) !important; font-size: 0.85rem !important; }
-    .tag button { background: none !important; border: none !important; cursor: pointer !important; color: var(--red) !important; display: flex !important; align-items: center !important; padding: 0 !important; opacity: 0.7 !important; }
-    .tag button:hover { opacity: 1 !important; }
-
-    /* DAY TABS - tracker horizontal tabs - THE MAIN FIX */
-    .day-tabs { display: flex !important; flex-direction: row !important; overflow-x: auto !important; border-bottom: 1px solid var(--border) !important; scrollbar-width: none !important; padding: 0 !important; margin: 0 !important; }
-    .day-tabs::-webkit-scrollbar { display: none !important; }
-    .day-tab { display: block !important; padding: 1rem 1.2rem !important; cursor: pointer !important; font-family: var(--font-mono) !important; font-size: 0.8rem !important; color: var(--text-muted) !important; border-bottom: 2px solid transparent !important; white-space: nowrap !important; text-align: center !important; transition: all 0.2s !important; flex-shrink: 0 !important; user-select: none !important; }
-    .day-tab:hover { color: var(--text-main) !important; background: rgba(255,255,255,0.02) !important; }
-    .day-tab.active { color: var(--teal) !important; border-bottom-color: var(--teal) !important; }
-
-    /* SUBJECT ROWS - tracker P/A/L rows */
-    .subject-row { display: flex !important; justify-content: space-between !important; align-items: center !important; padding: 1rem 1.2rem !important; background: rgba(30,41,59,0.25) !important; border: 1px solid var(--border) !important; border-radius: 10px !important; margin-bottom: 0.75rem !important; transition: background 0.2s !important; }
-    .subject-row:hover { background: rgba(30,41,59,0.45) !important; }
-    .status-group { display: flex !important; gap: 0.5rem !important; }
-    .status-btn { background: transparent !important; border: 1px solid var(--border) !important; color: var(--text-muted) !important; padding: 0.6rem 1rem !important; border-radius: 6px !important; cursor: pointer !important; font-family: var(--font-mono) !important; font-weight: bold !important; font-size: 0.9rem !important; transition: all 0.15s !important; }
-    .status-btn:hover { border-color: var(--teal) !important; color: var(--teal) !important; }
-    .selected-P { background: rgba(34,211,165,0.2) !important; border-color: var(--teal) !important; color: var(--teal) !important; }
-    .selected-A { background: rgba(248,113,113,0.2) !important; border-color: var(--red) !important; color: var(--red) !important; }
-    .selected-L { background: rgba(251,191,36,0.2) !important; border-color: var(--amber) !important; color: var(--amber) !important; }
-
-    /* BANNERS - analytics warnings */
-    .banner { display: flex !important; align-items: center !important; gap: 0.5rem !important; padding: 0.65rem 1rem !important; border-radius: 8px !important; font-size: 0.82rem !important; margin-top: 0.75rem !important; }
-    .banner-green { background: rgba(34,211,165,0.08) !important; border: 1px solid rgba(34,211,165,0.3) !important; color: var(--teal) !important; }
-    .banner-red { background: rgba(248,113,113,0.08) !important; border: 1px solid rgba(248,113,113,0.3) !important; color: var(--red) !important; }
-
-    /* TOAST */
-    .toast { position: fixed !important; bottom: 2rem !important; left: 50% !important; transform: translateX(-50%) translateY(20px) !important; background: var(--card) !important; border: 1px solid var(--border) !important; padding: 0.8rem 1.5rem !important; border-radius: 10px !important; font-size: 0.85rem !important; opacity: 0 !important; transition: all 0.3s ease !important; z-index: 9999 !important; display: flex !important; align-items: center !important; gap: 0.5rem !important; pointer-events: none !important; white-space: nowrap !important; }
-    .toast.visible { opacity: 1 !important; transform: translateX(-50%) translateY(0) !important; }
-    .toast.success { border-color: rgba(34,211,165,0.4) !important; color: var(--teal) !important; }
-    .toast.error { border-color: rgba(248,113,113,0.4) !important; color: var(--red) !important; }
-
-    /* PROGRESS HEADER */
-    .progress-header { display: flex !important; justify-content: space-between !important; align-items: center !important; margin-bottom: 0.25rem !important; }
-
-    /* MOBILE */
-    @media (max-width: 600px) {
-      .stat-grid { grid-template-columns: repeat(2, 1fr) !important; }
-    }
-  `}</style>
-    );
-}
-
+  `;
+  document.head.appendChild(style);
+};
 
 // Utils
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -220,7 +209,7 @@ const getDayOfWeek = (dateStr) => {
 };
 const getLast7Days = () => {
     const days = [];
-    for (let i = 6; i >= 0; i--) {
+    for(let i=6; i>=0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
         d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
@@ -230,12 +219,12 @@ const getLast7Days = () => {
 };
 
 const DEFAULT_DATA = {
-    subjects: [],
-    timetable: { Mon: [], Tue: [], Wed: [], Thu: [], Fri: [], Sat: [] },
-    attendance: {},
-    dailyLog: {},
-    phase: 'setup',
-    lectureSettings: { durationMinutes: 60 }
+  subjects: [],
+  timetable: { Mon: [], Tue: [], Wed: [], Thu: [], Fri: [], Sat: [] },
+  attendance: {}, 
+  dailyLog: {},
+  phase: 'setup',
+  lectureSettings: { durationMinutes: 60 }
 };
 
 // --- VISUAL ENHANCEMENT COMPONENTS ---
@@ -243,13 +232,13 @@ const DEFAULT_DATA = {
 function useCountUp(target, duration = 800) {
     const [count, setCount] = useState(0);
     const prevCountRef = useRef(0);
-
+    
     useEffect(() => {
         let startTime = null;
         const prev = prevCountRef.current;
         const diff = target - prev;
         if (diff === 0) return;
-
+        
         const isReduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (isReduced) {
             // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -260,7 +249,7 @@ function useCountUp(target, duration = 800) {
 
         let animationFrame;
         const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
-
+        
         const step = (timestamp) => {
             if (!startTime) startTime = timestamp;
             const progress = Math.min((timestamp - startTime) / duration, 1);
@@ -274,7 +263,7 @@ function useCountUp(target, duration = 800) {
         animationFrame = requestAnimationFrame(step);
         return () => cancelAnimationFrame(animationFrame);
     }, [target, duration]);
-
+    
     return count;
 }
 
@@ -288,19 +277,19 @@ function ParticleBackground() {
     useEffect(() => {
         const isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (isReduced) return;
-
+        
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         let animationFrame;
         let particles = [];
-
+        
         const resize = () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
         };
         window.addEventListener('resize', resize);
         resize();
-
+        
         for (let i = 0; i < 60; i++) {
             particles.push({
                 x: Math.random() * canvas.width,
@@ -309,30 +298,30 @@ function ParticleBackground() {
                 vy: (Math.random() - 0.5) * 1.0,
             });
         }
-
+        
         const step = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.fillStyle = 'rgba(34,211,165,0.4)';
             ctx.lineWidth = 1;
-
+            
             for (let i = 0; i < 60; i++) {
                 const p = particles[i];
                 p.x += p.vx * 0.4;
                 p.y += p.vy * 0.4;
                 if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
                 if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
-
+                
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
                 ctx.fill();
-
+                
                 for (let j = i + 1; j < 60; j++) {
                     const p2 = particles[j];
                     const dx = p.x - p2.x;
                     const dy = p.y - p2.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const dist = Math.sqrt(dx*dx + dy*dy);
                     if (dist < 120) {
-                        ctx.strokeStyle = `rgba(34,211,165,${0.2 * (1 - dist / 120)})`;
+                        ctx.strokeStyle = `rgba(34,211,165,${0.2 * (1 - dist/120)})`;
                         ctx.beginPath();
                         ctx.moveTo(p.x, p.y);
                         ctx.lineTo(p2.x, p2.y);
@@ -343,20 +332,20 @@ function ParticleBackground() {
             animationFrame = requestAnimationFrame(step);
         };
         animationFrame = requestAnimationFrame(step);
-
+        
         return () => {
             window.removeEventListener('resize', resize);
             cancelAnimationFrame(animationFrame);
         };
     }, []);
-    return <canvas ref={canvasRef} style={{ position: 'fixed', top: 0, left: 0, zIndex: -1, pointerEvents: 'none' }} />;
+    return <canvas ref={canvasRef} style={{position: 'fixed', top:0, left:0, zIndex: -1, pointerEvents: 'none'}} />;
 }
 
 function TiltCard({ children, className = '', style = {} }) {
     const cardRef = useRef(null);
     const [shine, setShine] = useState({ x: 50, y: 50, opacity: 0 });
     const isTouch = typeof window !== 'undefined' && 'ontouchstart' in window;
-
+    
     const onMouseMove = (e) => {
         if (isTouch) return;
         const card = cardRef.current;
@@ -368,11 +357,11 @@ function TiltCard({ children, className = '', style = {} }) {
         const centerY = rect.height / 2;
         const rotateX = ((y - centerY) / centerY) * -8;
         const rotateY = ((x - centerX) / centerX) * 8;
-
+        
         card.style.transform = `perspective(600px) rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
         setShine({ x: (x / rect.width) * 100, y: (y / rect.height) * 100, opacity: 0.06 });
     };
-
+    
     const onMouseLeave = () => {
         if (isTouch) return;
         const card = cardRef.current;
@@ -380,7 +369,7 @@ function TiltCard({ children, className = '', style = {} }) {
         card.style.transform = `perspective(600px) rotateX(0deg) rotateY(0deg)`;
         setShine(s => ({ ...s, opacity: 0 }));
     };
-
+    
     return (
         <div ref={cardRef} className={`tilt-card ${className}`} style={style} onMouseMove={onMouseMove} onMouseLeave={onMouseLeave}>
             <div className="tilt-content">
@@ -399,7 +388,7 @@ function RippleButton({ children, onClick, className = '' }) {
         const y = e.clientY - rect.top;
         const id = Date.now();
         setRipples(prev => [...prev, { x, y, id }]);
-        if (onClick) onClick(e);
+        if(onClick) onClick(e);
         setTimeout(() => setRipples(rs => rs.filter(r => r.id !== id)), 400);
     };
     return (
@@ -408,7 +397,7 @@ function RippleButton({ children, onClick, className = '' }) {
                 {children}
             </button>
             {ripples.map(r => (
-                <div key={r.id} className="ripple-circle" style={{ left: r.x - 20, top: r.y - 20, width: 40, height: 40 }} />
+                <div key={r.id} className="ripple-circle" style={{left: r.x - 20, top: r.y - 20, width: 40, height: 40}} />
             ))}
         </div>
     );
@@ -417,36 +406,36 @@ function RippleButton({ children, onClick, className = '' }) {
 function ConfettiOverlay({ trigger }) {
     const canvasRef = useRef(null);
     const triggeredRef = useRef(false);
-
+    
     useEffect(() => {
         if (!trigger || triggeredRef.current) return;
         const isReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (isReduced) return;
-
+        
         triggeredRef.current = true;
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
-
+        
         const colors = ['#22d3a5', '#f87171', '#fbbf24', '#67e8f9', '#a78bfa'];
         let particles = [];
-        for (let i = 0; i < 120; i++) {
+        for(let i=0; i<120; i++) {
             particles.push({
-                x: canvas.width / 2 + (Math.random() - 0.5) * 200,
-                y: canvas.height / 2 - 100 - Math.random() * 200,
-                vx: (Math.random() - 0.5) * 15,
-                vy: Math.random() * -15 - 5,
-                color: colors[Math.floor(Math.random() * colors.length)],
-                size: Math.random() * 6 + 4,
-                rot: Math.random() * Math.PI * 2,
-                rotSpeed: (Math.random() - 0.5) * 0.2
+                x: canvas.width/2 + (Math.random()-0.5)*200,
+                y: canvas.height/2 - 100 - Math.random()*200,
+                vx: (Math.random()-0.5)*15,
+                vy: Math.random()*-15 - 5,
+                color: colors[Math.floor(Math.random()*colors.length)],
+                size: Math.random()*6 + 4,
+                rot: Math.random()*Math.PI*2,
+                rotSpeed: (Math.random()-0.5)*0.2
             });
         }
-
+        
         let startTime = Date.now();
         let frame;
-
+        
         const step = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             let timePassed = Date.now() - startTime;
@@ -454,19 +443,19 @@ function ConfettiOverlay({ trigger }) {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 return;
             }
-
-            for (let i = 0; i < particles.length; i++) {
+            
+            for(let i=0; i<particles.length; i++) {
                 let p = particles[i];
                 p.x += p.vx;
                 p.y += p.vy;
                 p.vy += 0.5; // gravity
                 p.rot += p.rotSpeed;
-
+                
                 ctx.save();
                 ctx.translate(p.x, p.y);
                 ctx.rotate(p.rot);
                 ctx.fillStyle = p.color;
-                ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+                ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
                 ctx.restore();
             }
             frame = requestAnimationFrame(step);
@@ -474,37 +463,37 @@ function ConfettiOverlay({ trigger }) {
         frame = requestAnimationFrame(step);
         return () => cancelAnimationFrame(frame);
     }, [trigger]);
-
-    return <canvas ref={canvasRef} style={{ position: 'fixed', top: 0, left: 0, zIndex: 999, pointerEvents: 'none' }} />;
+    
+    return <canvas ref={canvasRef} style={{position: 'fixed', top:0, left:0, zIndex: 999, pointerEvents: 'none'}} />;
 }
 
 function AnimatedRing({ perc }) {
     const radius = 18;
     const circumference = 2 * Math.PI * radius;
     const [offset, setOffset] = useState(circumference);
-
+    
     useEffect(() => {
         const timer = setTimeout(() => {
             setOffset(circumference * (1 - (perc || 0) / 100));
         }, 50);
         return () => clearTimeout(timer);
     }, [perc, circumference]);
-
+    
     let color = '#f87171';
     if (perc >= 75) color = '#22d3a5';
     else if (perc >= 50) color = '#fbbf24';
-
+    
     return (
-        <div style={{ position: 'relative', width: 48, height: 48, flexShrink: 0 }}>
+        <div style={{position:'relative', width: 48, height: 48, flexShrink: 0}}>
             <svg width="48" height="48" viewBox="0 0 48 48">
                 <circle cx="24" cy="24" r={radius} fill="none" stroke="#1e293b" strokeWidth="4" />
-                <circle
-                    cx="24" cy="24" r={radius} fill="none" stroke={color} strokeWidth="4"
-                    strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset}
-                    style={{ transition: 'stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1)', transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}
+                <circle 
+                    cx="24" cy="24" r={radius} fill="none" stroke={color} strokeWidth="4" 
+                    strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset} 
+                    style={{transition: 'stroke-dashoffset 1s cubic-bezier(0.4,0,0.2,1)', transform: 'rotate(-90deg)', transformOrigin: '50% 50%'}}
                 />
             </svg>
-            <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-heading)', fontWeight: 700, fontSize: '10px', color }}>
+            <div style={{position:'absolute', top:0, left:0, width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'var(--font-heading)', fontWeight:700, fontSize:'10px', color}}>
                 <AnimatedNumber value={perc} />%
             </div>
         </div>
@@ -512,32 +501,32 @@ function AnimatedRing({ perc }) {
 }
 
 function RiskMeter({ perc }) {
-    const rot = (perc / 100) * 180 - 90;
-
+    const rot = (perc/100)*180 - 90;
+    
     let statusText = "SAFE";
     let statusColor = "#22d3a5";
     if (perc < 50) { statusText = "DANGER ZONE"; statusColor = "#f87171"; }
     else if (perc < 75) { statusText = "AT RISK"; statusColor = "#fbbf24"; }
-
+    
     return (
-        <TiltCard className="card text-center" style={{ padding: '2rem' }}>
+        <TiltCard className="card text-center" style={{padding: '2rem'}}>
             <h3 className="heading-font mb-2">OVERALL RISK METER</h3>
-            <div style={{ position: 'relative', width: 240, height: 120, margin: '0 auto', overflow: 'hidden' }}>
+            <div style={{position: 'relative', width: 240, height: 120, margin: '0 auto', overflow: 'hidden'}}>
                 <svg width="240" height="120" viewBox="0 0 240 120">
                     <path d="M 20 120 A 100 100 0 0 1 220 120" fill="none" stroke="#1e293b" strokeWidth="20" strokeLinecap="round" />
                     <path d="M 20 120 A 100 100 0 0 1 120 20" fill="none" stroke="#f87171" strokeWidth="20" strokeDasharray="157 157" strokeDashoffset="0" />
                     <path d="M 120 20 A 100 100 0 0 1 190.7 49.3" fill="none" stroke="#fbbf24" strokeWidth="20" strokeDasharray="78.5 157" strokeDashoffset="0" />
                     <path d="M 190.7 49.3 A 100 100 0 0 1 220 120" fill="none" stroke="#22d3a5" strokeWidth="20" />
-                    <g style={{ transition: 'transform 1s cubic-bezier(0.4,0,0.2,1)', transform: `rotate(${rot}deg)`, transformOrigin: '120px 120px' }}>
+                    <g style={{transition: 'transform 1s cubic-bezier(0.4,0,0.2,1)', transform: `rotate(${rot}deg)`, transformOrigin: '120px 120px'}}>
                         <line x1="120" y1="120" x2="120" y2="35" stroke="#f8fafc" strokeWidth="4" strokeLinecap="round" />
                         <circle cx="120" cy="120" r="8" fill="#f8fafc" />
                     </g>
                 </svg>
-                <div style={{ position: 'absolute', bottom: '10px', left: 0, width: '100%', textAlign: 'center', fontFamily: 'var(--font-heading)', fontSize: '2rem', fontWeight: 800 }}>
+                <div style={{position:'absolute', bottom: '10px', left:0, width:'100%', textAlign:'center', fontFamily:'var(--font-heading)', fontSize: '2rem', fontWeight: 800}}>
                     <AnimatedNumber value={perc} />%
                 </div>
             </div>
-            <div style={{ color: statusColor, fontWeight: 'bold', letterSpacing: '2px', marginTop: '1rem' }}>{statusText}</div>
+            <div style={{color: statusColor, fontWeight: 'bold', letterSpacing: '2px', marginTop: '1rem'}}>{statusText}</div>
         </TiltCard>
     );
 }
@@ -545,34 +534,34 @@ function RiskMeter({ perc }) {
 function CalendarHeatmap({ dailyLog }) {
     const endStr = getTodayDateStr();
     const endDate = new Date(endStr);
-
+    
     let cursor = new Date(endDate);
-    cursor.setDate(cursor.getDate() - (12 * 7));
-
-    while (cursor.getDay() !== 1) {
+    cursor.setDate(cursor.getDate() - (12 * 7)); 
+    
+    while(cursor.getDay() !== 1) {
         cursor.setDate(cursor.getDate() - 1);
     }
-
+    
     let currentWeek = [];
     const gridCols = [];
     const months = [];
     let lastMonth = -1;
-
+    
     let iterDate = new Date(cursor);
-    while (iterDate <= endDate || iterDate.getDay() !== 1) {
+    while (iterDate <= endDate || iterDate.getDay() !== 1) { 
         const dateStr = iterDate.toISOString().split('T')[0];
-        const dayIdx = iterDate.getDay();
-
-        if (dayIdx >= 1 && dayIdx <= 6) {
+        const dayIdx = iterDate.getDay(); 
+        
+        if (dayIdx >= 1 && dayIdx <= 6) { 
             const rec = dailyLog[dateStr];
             let cellColor = '#0f1623';
             let glow = '';
             let val = '-';
-
+            
             if (rec && Object.keys(rec).length > 0) {
                 const values = Object.values(rec);
-                const pVals = values.filter(v => v === 'P' || v === 'L').length;
-                const perc = Math.round((pVals / values.length) * 100);
+                const pVals = values.filter(v => v === 'P' || v === 'L').length; 
+                const perc = Math.round((pVals / values.length)*100);
                 val = perc;
                 if (perc === 0) cellColor = 'rgba(248,113,113,0.3)';
                 else if (perc < 50) cellColor = 'rgba(248,113,113,0.6)';
@@ -583,47 +572,47 @@ function CalendarHeatmap({ dailyLog }) {
                     glow = '0 0 6px rgba(34,211,165,0.5)';
                 }
             }
-
+            
             currentWeek.push({ date: dateStr, color: cellColor, glow, val });
         }
-
-        if (dayIdx === 0) {
+        
+        if (dayIdx === 0) { 
             gridCols.push(currentWeek);
             currentWeek = [];
-
+            
             const m = iterDate.getMonth();
             if (m !== lastMonth && gridCols.length > 0) {
                 months.push({ text: iterDate.toLocaleString('default', { month: 'short' }), col: gridCols.length - 1 });
                 lastMonth = m;
             }
         }
-
+        
         iterDate.setDate(iterDate.getDate() + 1);
         if (iterDate > endDate && currentWeek.length === 0) break;
     }
-    if (currentWeek.length > 0) gridCols.push(currentWeek);
+    if (currentWeek.length > 0) gridCols.push(currentWeek); 
 
-    const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S'];
+    const dayLabels = ['M','T','W','T','F','S'];
 
     return (
         <TiltCard className="card">
             <h3 className="heading-font mb-2">ATTENDANCE CALENDAR</h3>
-            <div style={{ position: 'relative', paddingLeft: '20px', paddingTop: '18px' }}>
+            <div style={{position: 'relative', paddingLeft: '20px', paddingTop: '18px'}}>
                 {months.map((m, i) => (
-                    <div key={i} style={{ position: 'absolute', top: 0, left: 20 + m.col * 17, fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                    <div key={i} style={{position: 'absolute', top: 0, left: 20 + m.col * 17, fontSize: '0.7rem', color: 'var(--text-muted)'}}>
                         {m.text}
                     </div>
                 ))}
-
-                <div style={{ position: 'absolute', top: 18, left: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                
+                <div style={{position: 'absolute', top: 18, left: 0, display: 'flex', flexDirection: 'column', gap: '3px'}}>
                     {dayLabels.map((d, i) => <div key={i} className="calendar-day-label">{d}</div>)}
                 </div>
-
+                
                 <div className="calendar-heatmap">
                     {gridCols.map((col, cIdx) => (
                         <div key={cIdx} className="calendar-col">
                             {col.map(cell => (
-                                <div key={cell.date} className="calendar-cell" style={{ background: cell.color, boxShadow: cell.glow }}>
+                                <div key={cell.date} className="calendar-cell" style={{background: cell.color, boxShadow: cell.glow}}>
                                     <div className="tooltip-content">{cell.date}: {cell.val}{cell.val !== '-' ? '%' : ''}</div>
                                 </div>
                             ))}
@@ -640,20 +629,20 @@ function useAuroraBackground(canvasRef) {
     useEffect(() => {
         const isReduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (isReduced) return;
-
+        
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d', { willReadFrequently: false });
         let frameId;
         let time = 0;
-
+        
         const resize = () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
         };
         window.addEventListener('resize', resize);
         resize();
-
+        
         const colors = [
             'rgba(34,211,165,0.07)',
             'rgba(103,232,249,0.06)',
@@ -662,37 +651,37 @@ function useAuroraBackground(canvasRef) {
             'rgba(251,191,36,0.03)'
         ];
         const speeds = [0.0003, 0.0004, 0.0002, 0.0005, 0.00035];
-
+        
         const draw = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             time += 16;
-
+            
             for (let i = 0; i < 5; i++) {
                 ctx.fillStyle = colors[i];
                 ctx.beginPath();
-
+                
                 const baseY = canvas.height * (0.2 + i * 0.08);
                 ctx.moveTo(0, canvas.height);
                 ctx.lineTo(0, baseY);
-
+                
                 const segments = 4;
                 const segWidth = canvas.width / segments;
-
+                
                 for (let j = 0; j < segments; j++) {
                     const x1 = j * segWidth;
                     const x2 = (j + 1) * segWidth;
-
+                    
                     const cp1x = x1 + segWidth / 2;
                     const cp1y = baseY + Math.sin(time * speeds[i] + j + i) * 80;
-
+                    
                     const cp2x = x2 - segWidth / 2;
                     const cp2y = baseY + Math.cos(time * speeds[i] + j + i + 1) * 80;
-
+                    
                     const endY = baseY + Math.sin(time * speeds[i] + (j + 1) + i) * 80;
-
+                    
                     ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, x2, endY);
                 }
-
+                
                 ctx.lineTo(canvas.width, canvas.height);
                 ctx.closePath();
                 ctx.fill();
@@ -700,7 +689,7 @@ function useAuroraBackground(canvasRef) {
             frameId = requestAnimationFrame(draw);
         };
         frameId = requestAnimationFrame(draw);
-
+        
         return () => {
             window.removeEventListener('resize', resize);
             cancelAnimationFrame(frameId);
@@ -718,19 +707,19 @@ function useNeuralBackground(canvasRef) {
     useEffect(() => {
         const isReduced = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if (isReduced) return;
-
+        
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d', { willReadFrequently: false });
         let frameId;
-
+        
         const isMobile = window.innerWidth < 768;
         const numNodes = isMobile ? 30 : 55;
-
+        
         const resize = () => {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-
+            
             if (nodesRef.current.length === 0) {
                 const nodes = [];
                 for (let i = 0; i < numNodes; i++) {
@@ -749,27 +738,27 @@ function useNeuralBackground(canvasRef) {
         };
         window.addEventListener('resize', resize);
         resize();
-
+        
         const draw = (timestamp) => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-
+            
             const nodes = nodesRef.current;
             const pulses = pulsesRef.current;
             const flash = flashRef.current;
-
+            
             if (!lastPulseTimeRef.current) lastPulseTimeRef.current = timestamp;
             if (!lastFlashTimeRef.current) lastFlashTimeRef.current = timestamp;
-
+            
             for (let i = 0; i < nodes.length; i++) {
                 const n = nodes[i];
                 n.x += n.vx;
                 n.y += n.vy;
-
+                
                 if (n.x < 0 || n.x > canvas.width) n.vx *= -1;
                 if (n.y < 0 || n.y > canvas.height) n.vy *= -1;
                 n.pulsePhase += n.pulseSpeed;
             }
-
+            
             ctx.lineWidth = 0.8;
             const connectedPairs = [];
             for (let i = 0; i < nodes.length; i++) {
@@ -777,7 +766,7 @@ function useNeuralBackground(canvasRef) {
                     const dx = nodes[i].x - nodes[j].x;
                     const dy = nodes[i].y - nodes[j].y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
-
+                    
                     if (dist < 130) {
                         ctx.strokeStyle = `rgba(34,211,165,${(1 - dist / 130) * 0.15})`;
                         ctx.beginPath();
@@ -788,7 +777,7 @@ function useNeuralBackground(canvasRef) {
                     }
                 }
             }
-
+            
             if (!isMobile && timestamp - lastPulseTimeRef.current > 2500) {
                 lastPulseTimeRef.current = timestamp;
                 if (connectedPairs.length > 0 && pulses.length < 6) {
@@ -801,23 +790,23 @@ function useNeuralBackground(canvasRef) {
                     });
                 }
             }
-
+            
             if (timestamp - lastFlashTimeRef.current > 4000) {
                 lastFlashTimeRef.current = timestamp;
                 flash.nodeIndex = Math.floor(Math.random() * nodes.length);
                 flash.startTime = timestamp;
                 flash.duration = 600;
             }
-
+            
             for (let i = pulses.length - 1; i >= 0; i--) {
                 const p = pulses[i];
                 p.progress += 0.016;
-
+                
                 if (p.progress >= 1) {
                     pulses.splice(i, 1);
                     continue;
                 }
-
+                
                 const nA = nodes[p.aIdx];
                 const nB = nodes[p.bIdx];
                 // Failsafe in case aIdx or bIdx are mysteriously out of bounds due to resize
@@ -827,7 +816,7 @@ function useNeuralBackground(canvasRef) {
                 }
                 const px = nA.x + (nB.x - nA.x) * p.progress;
                 const py = nA.y + (nB.y - nA.y) * p.progress;
-
+                
                 ctx.save();
                 ctx.fillStyle = 'rgba(103,232,249,0.8)';
                 ctx.shadowBlur = 8;
@@ -837,12 +826,12 @@ function useNeuralBackground(canvasRef) {
                 ctx.fill();
                 ctx.restore();
             }
-
+            
             for (let i = 0; i < nodes.length; i++) {
                 const n = nodes[i];
                 const currentRadius = n.radius + Math.sin(n.pulsePhase) * 0.8;
                 const opacity = 0.5 + 0.2 * Math.sin(n.pulsePhase);
-
+                
                 ctx.save();
                 if (flash.nodeIndex === i && timestamp - flash.startTime < flash.duration) {
                     ctx.fillStyle = 'rgba(34,211,165,0.9)';
@@ -859,11 +848,11 @@ function useNeuralBackground(canvasRef) {
                 }
                 ctx.restore();
             }
-
+            
             frameId = requestAnimationFrame(draw);
         };
         frameId = requestAnimationFrame(draw);
-
+        
         return () => {
             window.removeEventListener('resize', resize);
             cancelAnimationFrame(frameId);
@@ -912,506 +901,458 @@ function FloatingShapes() {
 }
 
 export default function App() {
-    const [user, setUser] = useState(null);
-    const [data, setData] = useState(DEFAULT_DATA);
-    const [activeTab, setActiveTab] = useState('setup');
-    const [syncStatus, setSyncStatus] = useState('synced');
-    const [toast, setToast] = useState({ visible: false, message: '', type: 'info' });
-    const [undoStack, setUndoStack] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [authError, setAuthError] = useState(null);
+  useEffect(() => { injectStyles(); }, []);
 
-    const saveTimeout = useRef(null);
-    const isFirstLoad = useRef(true);
-    const auroraRef = useRef(null);
-    const neuralRef = useRef(null);
+  const [user, setUser] = useState(null);
+  const [data, setData] = useState(DEFAULT_DATA);
+  const [activeTab, setActiveTab] = useState('setup');
+  const [syncStatus, setSyncStatus] = useState('offline');
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'info' });
+  const [undoStack, setUndoStack] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  const saveTimeout = useRef(null);
+  const isFirstLoad = useRef(true);
+  
+  const auroraRef = useRef(null);
+  const neuralRef = useRef(null);
+  useAuroraBackground(auroraRef);
+  useNeuralBackground(neuralRef);
 
-    useAuroraBackground(auroraRef);
-    useNeuralBackground(neuralRef);
+  // Auto-dismiss toast
+  useEffect(() => {
+    if (toast.visible) {
+      const t = setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 2500);
+      return () => clearTimeout(t);
+    }
+  }, [toast.visible]);
 
-    // Auto-dismiss toast
-    useEffect(() => {
-        if (toast.visible) {
-            const t = setTimeout(() => setToast(prev => ({ ...prev, visible: false })), 2500);
-            return () => clearTimeout(t);
-        }
-    }, [toast.visible]);
+  const showToast = useCallback((message, type = 'info') => {
+    setToast({ visible: true, message, type });
+  }, []);
 
-    const showToast = useCallback((message, type = 'info') => {
-        setToast({ visible: true, message, type });
-    }, []);
+  // Auth Effect
+  useEffect(() => {
+    if (!supabase) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setIsLoading(false);
+      return;
+    }
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
-    // Auth & Session listener
-    useEffect(() => {
-        const initAuth = async () => {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                setUser(session?.user ?? null);
-                if (!session) setIsLoading(false);
-            } catch (err) {
-                setSyncStatus('error');
-                setIsLoading(false);
-            }
-        };
-
-        initAuth();
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user ?? null);
-            if (_event === 'SIGNED_OUT') {
-                setData(DEFAULT_DATA);
-                localStorage.removeItem('attendr_v2');
-            }
-        });
-
-        return () => subscription.unsubscribe();
-    }, []);
-
-    // Database Sync: Initial Load
-    useEffect(() => {
-        if (!user) return;
-
-        const fetchUserData = async () => {
-            setIsLoading(true);
-            try {
-                const { data: remoteData, error } = await supabase
-                    .from('attendance_data')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .single();
-
-                if (error && error.code !== 'PGRST116') throw error; // PGRST116 is "no rows found"
-
-                if (remoteData) {
-                    setData({
-                        subjects: remoteData.subjects || [],
-                        timetable: remoteData.timetable || DEFAULT_DATA.timetable,
-                        attendance: remoteData.attendance || {},
-                        dailyLog: remoteData.daily_log || remoteData.attendance || {},
-                        phase: remoteData.phase || 'setup',
-                        lectureSettings: remoteData.lecture_settings || DEFAULT_DATA.lectureSettings
-                    });
-                } else {
-                    // If no row, create one
-                    await supabase.from('attendance_data').insert([{
-                        user_id: user.id,
-                        ...DEFAULT_DATA,
-                        updated_at: new Date().toISOString()
-                    }]);
-                    setData(DEFAULT_DATA);
-                }
-                setSyncStatus('synced');
-            } catch (err) {
-                console.error('Remote fetch failed, falling back to local.', err);
-                setSyncStatus('error');
-                const local = localStorage.getItem('attendr_v2');
-                if (local) setData(JSON.parse(local));
-            } finally {
-                setIsLoading(false);
-                isFirstLoad.current = false;
-            }
-        };
-
-        fetchUserData();
-    }, [user]);
-
-    // Database Sync: Debounced Upsert
-    useEffect(() => {
-        if (isFirstLoad.current || !user) return;
-
-        // Save to LocalStorage immediately
-        localStorage.setItem('attendr_v2', JSON.stringify(data));
-
-        setSyncStatus('syncing');
-        if (saveTimeout.current) clearTimeout(saveTimeout.current);
-
-        saveTimeout.current = setTimeout(async () => {
-            try {
-                const { error } = await supabase.from('attendance_data').upsert({
-                    user_id: user.id,
-                    subjects: data.subjects,
-                    timetable: data.timetable,
-                    attendance: data.attendance,
-                    daily_log: data.dailyLog || {},
-                    phase: data.phase,
-                    lecture_settings: data.lectureSettings || DEFAULT_DATA.lectureSettings,
-                    updated_at: new Date().toISOString()
-                });
-
-                if (error) throw error;
-                setSyncStatus('synced');
-            } catch (err) {
-                console.error('Sync failed', err);
-                setSyncStatus('error');
-            }
-        }, 1000);
-
-        return () => {
-            if (saveTimeout.current) clearTimeout(saveTimeout.current);
-        };
-    }, [data.subjects, data.timetable, data.attendance, data.phase, user]);
-
-    const handleEmailLogin = async (e, type) => {
-        e.preventDefault();
-        setAuthError(null);
-        const email = e.target.email.value;
-        const password = e.target.password.value;
-
+  // Load Data Effect
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      const local = localStorage.getItem('attendr_v2');
+      let loadedData = local ? JSON.parse(local) : DEFAULT_DATA;
+      
+      if (user && supabase) {
         try {
-            const { error } = type === 'signin'
-                ? await supabase.auth.signInWithPassword({ email, password })
-                : await supabase.auth.signUp({ email, password });
-
-            if (error) throw error;
-        } catch (err) {
-            setAuthError(err.message);
-        }
-    };
-
-    const handleGoogleLogin = async () => {
-        try {
-            const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
-            if (error) throw error;
-        } catch (err) {
-            setAuthError(err.message);
-        }
-    };
-
-    const handleLogout = async () => {
-        try {
-            await supabase.auth.signOut();
-        } catch (err) {
-            console.error('Logout error', err);
-        }
-    };
-
-    const handleReset = useCallback(() => {
-        if (window.confirm("Are you sure? This will permanently wipe all data from cloud and local!")) {
-            const reset = async () => {
-                try {
-                    if (user) {
-                        await supabase.from('attendance_data').delete().eq('user_id', user.id);
-                    }
-                    localStorage.removeItem('attendr_v2');
-                    setData(DEFAULT_DATA);
-                    setActiveTab('setup');
-                    setUndoStack([]);
-                    showToast('Data reset successfully', 'info');
-                } catch (err) {
-                    console.error('Reset failed', err);
-                    showToast('Failed to reset remote data', 'error');
-                }
+          const { data: remoteData } = await supabase
+            .from('attendance_data')
+            .select('*')
+            .eq('user_id', user.id)
+            .single();
+            
+          if (remoteData) {
+            loadedData = {
+              subjects: remoteData.subjects || [],
+              timetable: remoteData.timetable || DEFAULT_DATA.timetable,
+              attendance: remoteData.attendance || {},
+              dailyLog: remoteData.dailyLog || remoteData.attendance || {},
+              phase: remoteData.phase || 'setup',
+              lectureSettings: remoteData.lectureSettings || DEFAULT_DATA.lectureSettings
             };
-            reset();
+          }
+          setSyncStatus('synced');
+        } catch (err) {
+          console.warn('Failed to load remote data, using local fallback if available.', err);
+          setSyncStatus('offline');
         }
-    }, [user, showToast]);
+      } else {
+        setSyncStatus('offline');
+      }
 
-    const pushUndo = (newStateContent) => {
-        setUndoStack(prev => {
-            const st = [...prev, JSON.stringify(data)];
-            if (st.length > 20) return st.slice(st.length - 20);
-            return st;
+      if (loadedData.timetable) {
+        Object.keys(loadedData.timetable).forEach(day => {
+            loadedData.timetable[day] = loadedData.timetable[day].map((item, idx) => {
+                if (typeof item === 'string') {
+                    return {
+                        id: 'legacy_' + day + '_' + idx,
+                        subject: item,
+                        start: '09:00',
+                        duration: loadedData.lectureSettings?.durationMinutes || 60
+                    };
+                }
+                return item;
+            });
+            loadedData.timetable[day].sort((a,b) => (a.start || '09:00').localeCompare(b.start || '09:00'));
         });
-        setData(newStateContent);
+      }
+
+      if (loadedData.subjects && loadedData.subjects.length > 0) {
+          loadedData.phase = 'ready';
+      }
+
+      setData(loadedData);
+      setActiveTab(loadedData.phase === 'ready' ? 'tracker' : 'setup');
+      isFirstLoad.current = false;
+      setIsLoading(false);
     };
 
-    const handleUndo = () => {
-        if (undoStack.length === 0) return;
-        const previous = JSON.parse(undoStack[undoStack.length - 1]);
-        setData(previous);
-        setUndoStack(prev => prev.slice(0, prev.length - 1));
-        showToast('Undo successful', 'success');
-    };
-
-    if (isLoading) {
-        return (
-            <div className="loading-overlay">
-                <div className="spinner"></div>
-                <div className="loading-text">LOADING YOUR DATA...</div>
-            </div>
-        );
+    if (user || !supabase) { // If no supabase, load local directly
+        loadData();
     }
+  }, [user]);
 
-    if (!user) {
-        return (
-            <>
-                <GlobalStyles />
-                <div className="login-container">
-                    <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
-                        <canvas ref={auroraRef} id="aurora-canvas" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
-                        <canvas ref={neuralRef} id="neural-canvas" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 1 }} />
-                        <FloatingShapes />
-                    </div>
-                    <div className="glow-tl"></div><div className="glow-br"></div>
-
-                    <div className="login-box">
-                        <div className="heading-font title mb-1 text-teal" style={{ fontSize: '2.5rem', letterSpacing: '4px' }}>MARKD</div>
-                        <p className="text-muted mb-2" style={{ letterSpacing: '2px', fontSize: '0.8rem' }}>MARK · TRACK · ANALYSE</p>
-
-                        {authError && (
-                            <div className="error-banner">
-                                <AlertCircle size={16} /> {authError}
-                            </div>
-                        )}
-
-                        <div style={{ marginTop: '2rem' }}>
-                            <form onSubmit={(e) => handleEmailLogin(e, 'signin')}>
-                                <input name="email" type="email" placeholder="Email Address" className="input-field" required />
-                                <input name="password" type="password" placeholder="Password" className="input-field" required />
-
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '0.5rem' }}>
-                                    <button type="submit" className="btn btn-primary">SIGN IN</button>
-                                    <button type="button" className="btn btn-outline" onClick={(e) => {
-                                        const form = e.target.closest('form');
-                                        if (form.reportValidity()) handleEmailLogin({ preventDefault: () => { }, target: form }, 'signup');
-                                    }}>SIGN UP</button>
-                                </div>
-                            </form>
-
-                            <div className="login-divider">OR</div>
-
-                            <button className="btn btn-outline" style={{ width: '100%', padding: '0.8rem', gap: '0.8rem' }} onClick={handleGoogleLogin}>
-                                <img src="https://www.google.com/favicon.ico" width="18" height="18" alt="Google" />
-                                Continue with Google
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </>
-        );
+  // Save Data Effect
+  useEffect(() => {
+    if (isFirstLoad.current) return;
+    
+    // Instant local save
+    localStorage.setItem('attendr_v2', JSON.stringify(data));
+    
+    if (user && supabase) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSyncStatus('syncing');
+      if (saveTimeout.current) clearTimeout(saveTimeout.current);
+      
+      saveTimeout.current = setTimeout(async () => {
+        try {
+          // Check if row exists
+          const { data: existing } = await supabase.from('attendance_data').select('id').eq('user_id', user.id).single();
+          const payload = {
+              user_id: user.id,
+              subjects: data.subjects,
+              timetable: data.timetable,
+              attendance: data.attendance,
+              dailyLog: data.dailyLog || {},
+              phase: data.phase,
+              lectureSettings: data.lectureSettings || DEFAULT_DATA.lectureSettings,
+              updated_at: new Date().toISOString()
+          };
+          
+          if (existing) {
+              await supabase.from('attendance_data').update(payload).eq('id', existing.id);
+          } else {
+              await supabase.from('attendance_data').insert([payload]);
+          }
+          setSyncStatus('synced');
+        } catch (err) {
+          console.error('Sync failed', err);
+          setSyncStatus('offline');
+          showToast('Cloud sync failed - working offline', 'error');
+        }
+      }, 1000);
     }
+  }, [data, user, showToast]);
 
+  const handleLogin = async () => {
+    if (!supabase) {
+        showToast('Supabase not configured. App will run offline locally.', 'info');
+        setIsLoading(false);
+        return;
+    }
+    await supabase.auth.signInWithOAuth({ provider: 'google' });
+  };
+
+  const handleLogout = async () => {
+    if (supabase) await supabase.auth.signOut();
+    setUser(null);
+    setData(DEFAULT_DATA);
+    localStorage.removeItem('attendr_v2');
+  };
+
+  const handleReset = useCallback(() => {
+    if (window.confirm("Are you sure? This will wipe all data!")) {
+      const reset = async () => {
+        if (user && supabase) {
+          await supabase.from('attendance_data').delete().eq('user_id', user.id);
+        }
+        localStorage.removeItem('attendr_v2');
+        setData(DEFAULT_DATA);
+        setActiveTab('setup');
+        setUndoStack([]);
+        showToast('All data reset', 'info');
+      };
+      reset();
+    }
+  }, [user, showToast]);
+
+  const pushUndo = (newStateContent) => {
+    setUndoStack(prev => {
+        const st = [...prev, JSON.stringify(data)];
+        if (st.length > 20) return st.slice(st.length - 20);
+        return st;
+    });
+    setData(newStateContent);
+  };
+
+  const handleUndo = () => {
+    if (undoStack.length === 0) return;
+    const previous = JSON.parse(undoStack[undoStack.length - 1]);
+    setData(previous);
+    setUndoStack(prev => prev.slice(0, prev.length - 1));
+    showToast('Undo successful', 'success');
+  };
+
+  if (!user && supabase && SUPABASE_URL && SUPABASE_KEY && isLoading === false) {
     return (
-        <>
-            <GlobalStyles />
-            <div className="app-container">
-                <div style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }}>
-                    <canvas ref={auroraRef} id="aurora-canvas" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }} />
-                    <canvas ref={neuralRef} id="neural-canvas" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', zIndex: 1 }} />
-                    <FloatingShapes />
-                </div>
-                <div className="glow-tl"></div><div className="glow-br"></div>
-
-                <header className="header">
-                    <div>
-                        <div className="heading-font title">MARKD <span className="title-accent">//</span></div>
-                        <div className="sync-indicator mt-1">
-                            <span className={`sync-dot ${syncStatus}`}></span>
-                            <span style={{ fontSize: '0.7rem', letterSpacing: '1px' }}>
-                                {syncStatus === 'synced' ? 'SYNCED' : syncStatus === 'syncing' ? 'SYNCING...' : 'OFFLINE / SYNC ERROR'}
-                            </span>
-                        </div>
-                    </div>
-                    <div className="user-sect">
-                        <button className="btn btn-danger btn-outline" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem' }} onClick={handleReset} title="Hard Reset">
-                            <Settings size={14} /> RESET
-                        </button>
-                        <div className="user-info">
-                            <div className="user-name">{user.user_metadata?.full_name || user.email?.split('@')[0]}</div>
-                            <button className="btn btn-outline" style={{ border: 'none', padding: 0.2, color: 'var(--red)', fontSize: '0.7rem' }} onClick={handleLogout}>LOGOUT</button>
-                        </div>
-                        <div className="avatar">
-                            {user.user_metadata?.avatar_url ? (
-                                <img src={user.user_metadata.avatar_url} alt="avatar" />
-                            ) : (
-                                <div className="text-muted" style={{ fontWeight: 'bold' }}>{user.email?.charAt(0).toUpperCase()}</div>
-                            )}
-                        </div>
-                    </div>
-                </header>
-
-                <div className="nav-tabs">
-                    <button className={activeTab === 'setup' ? 'active' : ''} onClick={() => setActiveTab('setup')}><Settings size={16} /> SETUP</button>
-                    <button className={activeTab === 'tracker' ? 'active' : ''} disabled={data.phase === 'setup'} onClick={() => setActiveTab('tracker')}><CheckSquare size={16} /> TRACKER</button>
-                    <button className={activeTab === 'analytics' ? 'active' : ''} disabled={data.phase === 'setup'} onClick={() => setActiveTab('analytics')}><Activity size={16} /> ANALYTICS</button>
-                </div>
-
-                <main className="main-content">
-                    {activeTab === 'setup' && <SetupTab data={data} setData={setData} setActiveTab={setActiveTab} />}
-                    {activeTab === 'tracker' && <TrackerTab data={data} pushUndo={pushUndo} handleUndo={handleUndo} undoStack={undoStack} showToast={showToast} />}
-                    {activeTab === 'analytics' && <AnalyticsTab data={data} />}
-                </main>
-
-                <div className={`toast ${toast.visible ? 'visible' : ''} ${toast.type}`}>
-                    {toast.type === 'success' ? <CheckCircle size={20} /> : toast.type === 'error' ? <AlertCircle size={20} /> : <Circle size={20} />}
-                    {toast.message}
-                </div>
-            </div>
-        </>
+      <div className="login-container">
+        <div style={{ position:'fixed', inset:0, zIndex:0, pointerEvents:'none' }}>
+          <canvas ref={auroraRef} id="aurora-canvas" style={{ position:'absolute', inset:0, width:'100%', height:'100%' }} />
+          <canvas ref={neuralRef} id="neural-canvas" style={{ position:'absolute', inset:0, width:'100%', height:'100%', zIndex:1 }} />
+          <FloatingShapes />
+        </div>
+        <div className="glow-tl"></div><div className="glow-br"></div>
+        <div className="login-box">
+          <div className="heading-font title mb-2 text-teal" style={{ fontSize: '2rem' }}>MARKD</div>
+          <p className="text-muted mb-2">Industrial grade attendance tracking.</p>
+          <button className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }} onClick={handleLogin}>
+            <Calendar size={20} /> Continue with Google
+          </button>
+        </div>
+      </div>
     );
+  }
+
+  if (isLoading) {
+      return <div className="login-container"><div className="heading-font title text-teal" style={{animation: 'pulse 1s infinite'}}>LOAD DATA //_</div></div>;
+  }
+
+  return (
+    <div className="app-container">
+      <div style={{ position:'fixed', inset:0, zIndex:0, pointerEvents:'none' }}>
+        <canvas ref={auroraRef} id="aurora-canvas" style={{ position:'absolute', inset:0, width:'100%', height:'100%' }} />
+        <canvas ref={neuralRef} id="neural-canvas" style={{ position:'absolute', inset:0, width:'100%', height:'100%', zIndex:1 }} />
+        <FloatingShapes />
+      </div>
+      <div className="glow-tl"></div><div className="glow-br"></div>
+      
+      <header className="header">
+        <div>
+            <div className="heading-font title">MARKD <span className="title-accent">//</span></div>
+            <div className="sync-indicator mt-1">
+                <span className={`sync-dot ${syncStatus}`}></span>
+                {syncStatus === 'synced' ? 'SYNCED TO CLOUD' : syncStatus === 'syncing' ? 'SYNCING...' : 'OFFLINE MODE'}
+            </div>
+        </div>
+        <div className="user-sect">
+            {(user || supabase === null) && (
+              <button className="btn btn-danger btn-outline" onClick={handleReset} title="Hard Reset">
+                <Settings size={16} /> RESET
+              </button>
+            )}
+            {user && (
+                <>
+                <div className="avatar">
+                    {user.user_metadata?.avatar_url ? <img src={user.user_metadata.avatar_url} alt="avatar" /> : <div className="text-muted">{user.email?.charAt(0).toUpperCase()}</div>}
+                </div>
+                <button className="btn btn-outline" style={{borderColor: 'transparent', color: 'var(--text-muted)'}} onClick={handleLogout}><LogOut size={18}/></button>
+                </>
+            )}
+        </div>
+      </header>
+
+      <div className="nav-tabs">
+        <button className={activeTab === 'setup' ? 'active' : ''} onClick={() => setActiveTab('setup')}><Settings size={16} /> SETUP</button>
+        <button className={activeTab === 'tracker' ? 'active' : ''} disabled={data.phase === 'setup'} onClick={() => setActiveTab('tracker')}><CheckSquare size={16} /> TRACKER</button>
+        <button className={activeTab === 'analytics' ? 'active' : ''} disabled={data.phase === 'setup'} onClick={() => setActiveTab('analytics')}><Activity size={16} /> ANALYTICS</button>
+      </div>
+
+      <main className="main-content">
+        {activeTab === 'setup' && <SetupTab data={data} setData={setData} setActiveTab={setActiveTab} />}
+        {activeTab === 'tracker' && <TrackerTab data={data} pushUndo={pushUndo} handleUndo={handleUndo} undoStack={undoStack} showToast={showToast} />}
+        {activeTab === 'analytics' && <AnalyticsTab data={data} />}
+      </main>
+
+      <div className={`toast ${toast.visible ? 'visible' : ''} ${toast.type}`}>
+        {toast.type === 'success' ? <CheckCircle size={20} /> : toast.type === 'error' ? <AlertCircle size={20} /> : <Circle size={20} />}
+        {toast.message}
+      </div>
+    </div>
+  );
 }
 
 // ----------------------------------------------------------------------
 // SETUP TAB
 // ----------------------------------------------------------------------
 function SetupTab({ data, setData, setActiveTab }) {
-    const [subInput, setSubInput] = useState('');
-    const [classForm, setClassForm] = useState({ day: null, subject: '', start: '09:00', duration: data.lectureSettings?.durationMinutes || 60 });
+  const [subInput, setSubInput] = useState('');
+  const [classForm, setClassForm] = useState({ day: null, subject: '', start: '09:00', duration: data.lectureSettings?.durationMinutes || 60 });
 
-    const addSubject = () => {
-        const val = subInput.trim().toUpperCase();
-        if (val && !data.subjects.includes(val)) {
-            setData({ ...data, subjects: [...data.subjects, val] });
-            setSubInput('');
-        }
+  const addSubject = () => {
+    const val = subInput.trim().toUpperCase();
+    if (val && !data.subjects.includes(val)) {
+        setData({ ...data, subjects: [...data.subjects, val] });
+        setSubInput('');
+    }
+  };
+
+  const removeSubject = (sub) => {
+    const newSubjects = data.subjects.filter(s => s !== sub);
+    const newTimetable = { ...data.timetable };
+    Object.keys(newTimetable).forEach(day => {
+        newTimetable[day] = newTimetable[day].filter(cls => (typeof cls === 'string' ? cls : cls.subject) !== sub);
+    });
+    // We do not cleanup attendance history here so old data remains in analytics
+    setData({ ...data, subjects: newSubjects, timetable: newTimetable });
+  };
+
+  const openClassForm = (day) => {
+    setClassForm({ day, subject: data.subjects[0] || '', start: '09:00', duration: data.lectureSettings?.durationMinutes || 60 });
+  };
+
+  const saveClass = (day) => {
+    if (!classForm.subject) return alert('Select a subject');
+    const newClass = {
+        id: Math.random().toString(36).substr(2, 9),
+        subject: classForm.subject,
+        start: classForm.start,
+        duration: parseInt(classForm.duration) || 60
     };
+    const dayClasses = [...data.timetable[day], newClass].sort((a,b) => a.start.localeCompare(b.start));
+    setData({...data, timetable: {...data.timetable, [day]: dayClasses}});
+    setClassForm({ day: null, subject: '', start: '09:00', duration: 60 });
+  };
 
-    const removeSubject = (sub) => {
-        const newSubjects = data.subjects.filter(s => s !== sub);
-        const newTimetable = { ...data.timetable };
-        Object.keys(newTimetable).forEach(day => {
-            newTimetable[day] = newTimetable[day].filter(cls => (typeof cls === 'string' ? cls : cls.subject) !== sub);
-        });
-        // We do not cleanup attendance history here so old data remains in analytics
-        setData({ ...data, subjects: newSubjects, timetable: newTimetable });
-    };
+  const removeClass = (day, classId) => {
+    const dayClasses = data.timetable[day].filter(c => c.id !== classId);
+    setData({...data, timetable: {...data.timetable, [day]: dayClasses}});
+  };
 
-    const openClassForm = (day) => {
-        setClassForm({ day, subject: data.subjects[0] || '', start: '09:00', duration: data.lectureSettings?.durationMinutes || 60 });
-    };
+  const finishSetup = () => {
+    if (data.subjects.length === 0) return alert('Add at least one subject');
+    setData({ ...data, phase: 'ready' });
+    setActiveTab('tracker');
+  };
 
-    const saveClass = (day) => {
-        if (!classForm.subject) return alert('Select a subject');
-        const newClass = {
-            id: Math.random().toString(36).substr(2, 9),
-            subject: classForm.subject,
-            start: classForm.start,
-            duration: parseInt(classForm.duration) || 60
-        };
-        const dayClasses = [...data.timetable[day], newClass].sort((a, b) => a.start.localeCompare(b.start));
-        setData({ ...data, timetable: { ...data.timetable, [day]: dayClasses } });
-        setClassForm({ day: null, subject: '', start: '09:00', duration: 60 });
-    };
+  return (
+    <div className="card">
+        <h2 className="heading-font mb-2">1. CONFIGURE SUBJECTS</h2>
+        <div style={{display:'flex', gap:'0.5rem', marginBottom:'1rem'}}>
+            <input 
+                className="input-field" 
+                style={{marginBottom:0}}
+                placeholder="E.g. MATH 101" 
+                value={subInput} 
+                onChange={e => setSubInput(e.target.value)} 
+                onKeyDown={e => e.key === 'Enter' && addSubject()} 
+            />
+            <button className="btn btn-primary" onClick={addSubject}>ADD</button>
+        </div>
+        <div className="tag-list mb-2">
+            {data.subjects.map(s => (
+                <div key={s} className="tag">
+                    {s} <button onClick={() => removeSubject(s)}><Trash2 size={14}/></button>
+                </div>
+            ))}
+            {data.subjects.length === 0 && <span className="text-muted">No subjects added.</span>}
+        </div>
 
-    const removeClass = (day, classId) => {
-        const dayClasses = data.timetable[day].filter(c => c.id !== classId);
-        setData({ ...data, timetable: { ...data.timetable, [day]: dayClasses } });
-    };
-
-    const finishSetup = () => {
-        if (data.subjects.length === 0) return alert('Add at least one subject');
-        setData({ ...data, phase: 'ready' });
-        setActiveTab('tracker');
-    };
-
-    return (
-        <div className="card">
-            <h2 className="heading-font mb-2">1. CONFIGURE SUBJECTS</h2>
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-                <input
-                    className="input-field"
-                    style={{ marginBottom: 0 }}
-                    placeholder="E.g. MATH 101"
-                    value={subInput}
-                    onChange={e => setSubInput(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && addSubject()}
-                />
-                <button className="btn btn-primary" onClick={addSubject}>ADD</button>
+        {data.subjects.length > 0 && (
+            <>
+            <h2 className="heading-font mb-2 mt-2">2. CLASS SETTINGS</h2>
+            <div className="card" style={{padding: '1.5rem'}}>
+                <div style={{display:'flex', alignItems:'center', gap:'1rem'}}>
+                    <div style={{flex:1}}>
+                        <div className="heading-font">Default Lecture Duration</div>
+                        <div className="text-muted" style={{fontSize:'0.85rem'}}>Used to calculate total hours spent in class.</div>
+                    </div>
+                    <div style={{display:'flex', alignItems:'center', gap:'0.5rem'}}>
+                        <input 
+                            type="number" 
+                            className="input-field" 
+                            style={{width: '80px', marginBottom: 0, textAlign: 'center'}}
+                            value={data.lectureSettings?.durationMinutes || 60} 
+                            onChange={e => setData({...data, lectureSettings: {...data.lectureSettings, durationMinutes: parseInt(e.target.value) || 0}})} 
+                            min="1"
+                        />
+                        <span className="text-muted">mins</span>
+                    </div>
+                </div>
             </div>
-            <div className="tag-list mb-2">
-                {data.subjects.map(s => (
-                    <div key={s} className="tag">
-                        {s} <button onClick={() => removeSubject(s)}><Trash2 size={14} /></button>
+
+            <h2 className="heading-font mb-2 mt-2">3. WEEKLY TIMETABLE</h2>
+            <div className="grid-2">
+                {DAYS.map(day => (
+                    <div key={day} className="card" style={{padding: '1rem', marginBottom:0}}>
+                        <div className="flex-between mb-1">
+                            <h3 className="heading-font text-teal">{day}</h3>
+                            <button className="btn btn-outline" style={{padding: '0.3rem 0.6rem', fontSize: '0.8rem'}} onClick={() => openClassForm(day)}>+ CLASS</button>
+                        </div>
+                        
+                        {data.timetable[day].length === 0 ? (
+                            <div className="text-muted text-center" style={{padding: '1.5rem', fontSize: '0.85rem'}}>No classes scheduled.</div>
+                        ) : (
+                            <div className="mt-1">
+                                {data.timetable[day].map(cls => {
+                                    const [h, m] = (cls.start || '09:00').split(':').map(Number);
+                                    const d = parseInt(cls.duration || 60);
+                                    const endTotal = h * 60 + m + d;
+                                    const endH = Math.floor(endTotal / 60) % 24;
+                                    const endM = endTotal % 60;
+                                    const endStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+                                    
+                                    return (
+                                        <div key={cls.id} className="class-item">
+                                            <div>
+                                                <div className="class-item-time">{cls.start} - {endStr}</div>
+                                                <div className="class-item-sub text-main">{cls.subject}</div>
+                                            </div>
+                                            <button className="btn btn-outline" style={{padding: '0.4rem', color: 'var(--red)', border: 'none'}} onClick={() => removeClass(day, cls.id)}><Trash2 size={16}/></button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+
+                        {classForm.day === day && (
+                            <div className="class-form">
+                                <div style={{display:'flex', flexDirection:'column', gap:'0.4rem', marginBottom:'0.75rem'}}>
+                                    <label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Subject</label>
+                                    <select className="input-field" style={{marginBottom: 0, padding:'0.6rem'}} value={classForm.subject} onChange={e => setClassForm({...classForm, subject: e.target.value})}>
+                                        <option value="" disabled>Select subject...</option>
+                                        {data.subjects.map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                </div>
+                                <div className="grid-2" style={{gap: '0.5rem', marginBottom:'1rem'}}>
+                                    <div style={{display:'flex', flexDirection:'column', gap:'0.4rem'}}>
+                                        <label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Start Time</label>
+                                        <input type="time" className="input-field" style={{marginBottom: 0, padding:'0.6rem'}} value={classForm.start} onChange={e => setClassForm({...classForm, start: e.target.value})} />
+                                    </div>
+                                    <div style={{display:'flex', flexDirection:'column', gap:'0.4rem'}}>
+                                        <label style={{fontSize: '0.8rem', color: 'var(--text-muted)'}}>Duration (mins)</label>
+                                        <input type="number" className="input-field" style={{marginBottom: 0, padding:'0.6rem'}} value={classForm.duration} onChange={e => setClassForm({...classForm, duration: e.target.value})} />
+                                    </div>
+                                </div>
+                                <div style={{display:'flex', gap:'0.5rem'}}>
+                                    <button className="btn btn-primary" style={{flex: 1, padding: '0.5rem'}} onClick={() => saveClass(day)}>SAVE</button>
+                                    <button className="btn btn-outline" style={{flex: 1, padding: '0.5rem'}} onClick={() => setClassForm({ day: null, subject: '', start: '09:00', duration: 60 })}>CANCEL</button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 ))}
-                {data.subjects.length === 0 && <span className="text-muted">No subjects added.</span>}
             </div>
-
-            {data.subjects.length > 0 && (
-                <>
-                    <h2 className="heading-font mb-2 mt-2">2. CLASS SETTINGS</h2>
-                    <div className="card" style={{ padding: '1.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                            <div style={{ flex: 1 }}>
-                                <div className="heading-font">Default Lecture Duration</div>
-                                <div className="text-muted" style={{ fontSize: '0.85rem' }}>Used to calculate total hours spent in class.</div>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                <input
-                                    type="number"
-                                    className="input-field"
-                                    style={{ width: '80px', marginBottom: 0, textAlign: 'center' }}
-                                    value={data.lectureSettings?.durationMinutes || 60}
-                                    onChange={e => setData({ ...data, lectureSettings: { ...data.lectureSettings, durationMinutes: parseInt(e.target.value) || 0 } })}
-                                    min="1"
-                                />
-                                <span className="text-muted">mins</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <h2 className="heading-font mb-2 mt-2">3. WEEKLY TIMETABLE</h2>
-                    <div className="grid-2">
-                        {DAYS.map(day => (
-                            <div key={day} className="card" style={{ padding: '1rem', marginBottom: 0 }}>
-                                <div className="flex-between mb-1">
-                                    <h3 className="heading-font text-teal">{day}</h3>
-                                    <button className="btn btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }} onClick={() => openClassForm(day)}>+ CLASS</button>
-                                </div>
-
-                                {data.timetable[day].length === 0 ? (
-                                    <div className="text-muted text-center" style={{ padding: '1.5rem', fontSize: '0.85rem' }}>No classes scheduled.</div>
-                                ) : (
-                                    <div className="mt-1">
-                                        {data.timetable[day].map(cls => {
-                                            const [h, m] = (cls.start || '09:00').split(':').map(Number);
-                                            const d = parseInt(cls.duration || 60);
-                                            const endTotal = h * 60 + m + d;
-                                            const endH = Math.floor(endTotal / 60) % 24;
-                                            const endM = endTotal % 60;
-                                            const endStr = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
-
-                                            return (
-                                                <div key={cls.id} className="class-item">
-                                                    <div>
-                                                        <div className="class-item-time">{cls.start} - {endStr}</div>
-                                                        <div className="class-item-sub text-main">{cls.subject}</div>
-                                                    </div>
-                                                    <button className="btn btn-outline" style={{ padding: '0.4rem', color: 'var(--red)', border: 'none' }} onClick={() => removeClass(day, cls.id)}><Trash2 size={16} /></button>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-
-                                {classForm.day === day && (
-                                    <div className="class-form">
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.75rem' }}>
-                                            <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Subject</label>
-                                            <select className="input-field" style={{ marginBottom: 0, padding: '0.6rem' }} value={classForm.subject} onChange={e => setClassForm({ ...classForm, subject: e.target.value })}>
-                                                <option value="" disabled>Select subject...</option>
-                                                {data.subjects.map(s => <option key={s} value={s}>{s}</option>)}
-                                            </select>
-                                        </div>
-                                        <div className="grid-2" style={{ gap: '0.5rem', marginBottom: '1rem' }}>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                                                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Start Time</label>
-                                                <input type="time" className="input-field" style={{ marginBottom: 0, padding: '0.6rem' }} value={classForm.start} onChange={e => setClassForm({ ...classForm, start: e.target.value })} />
-                                            </div>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                                                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Duration (mins)</label>
-                                                <input type="number" className="input-field" style={{ marginBottom: 0, padding: '0.6rem' }} value={classForm.duration} onChange={e => setClassForm({ ...classForm, duration: e.target.value })} />
-                                            </div>
-                                        </div>
-                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                            <button className="btn btn-primary" style={{ flex: 1, padding: '0.5rem' }} onClick={() => saveClass(day)}>SAVE</button>
-                                            <button className="btn btn-outline" style={{ flex: 1, padding: '0.5rem' }} onClick={() => setClassForm({ day: null, subject: '', start: '09:00', duration: 60 })}>CANCEL</button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-
-                    <div className="mt-2 text-center" style={{ paddingTop: '2rem', borderTop: '1px solid var(--border)' }}>
-                        <button className="btn btn-primary" style={{ padding: '1rem 3rem', fontSize: '1.2rem' }} onClick={finishSetup}>
-                            <Play size={20} /> START TRACKING
-                        </button>
-                    </div>
-                </>
-            )}
-        </div>
-    );
+            
+            <div className="mt-2 text-center" style={{paddingTop: '2rem', borderTop: '1px solid var(--border)'}}>
+                <button className="btn btn-primary" style={{padding: '1rem 3rem', fontSize:'1.2rem'}} onClick={finishSetup}>
+                    <Play size={20} /> START TRACKING
+                </button>
+            </div>
+            </>
+        )}
+    </div>
+  );
 }
 
 // ----------------------------------------------------------------------
@@ -1419,7 +1360,7 @@ function SetupTab({ data, setData, setActiveTab }) {
 // ----------------------------------------------------------------------
 function TrackerTab({ data, pushUndo, handleUndo, undoStack, showToast }) {
     const todayStr = getTodayDateStr();
-
+    
     const [selectedDate, setSelectedDate] = useState(todayStr);
     const selectedDayOfWeek = getDayOfWeek(selectedDate);
     const subjectsToday = data.timetable[selectedDayOfWeek] || [];
@@ -1436,7 +1377,7 @@ function TrackerTab({ data, pushUndo, handleUndo, undoStack, showToast }) {
         if (!currentData.attendance[selectedDate]) currentData.attendance[selectedDate] = {};
         if (!currentData.dailyLog) currentData.dailyLog = {};
         if (!currentData.dailyLog[selectedDate]) currentData.dailyLog[selectedDate] = {};
-
+        
         // If clicking same status, clear it
         if (currentData.attendance[selectedDate][subject] === status) {
             delete currentData.attendance[selectedDate][subject];
@@ -1479,8 +1420,8 @@ function TrackerTab({ data, pushUndo, handleUndo, undoStack, showToast }) {
         let streak = 0;
         let checkDate = new Date();
         checkDate.setMinutes(checkDate.getMinutes() - checkDate.getTimezoneOffset());
-
-        while (true) {
+        
+        while(true) {
             const dStr = checkDate.toISOString().split('T')[0];
             const hasData = data.attendance[dStr] && Object.keys(data.attendance[dStr]).length > 0;
             if (hasData) {
@@ -1488,8 +1429,8 @@ function TrackerTab({ data, pushUndo, handleUndo, undoStack, showToast }) {
                 checkDate.setDate(checkDate.getDate() - 1);
             } else {
                 if (dStr === todayStr && streak === 0) {
-                    // Check yesterday before breaking if today is empty
-                    checkDate.setDate(checkDate.getDate() - 1);
+                     // Check yesterday before breaking if today is empty
+                     checkDate.setDate(checkDate.getDate() - 1);
                 } else {
                     break;
                 }
@@ -1501,7 +1442,7 @@ function TrackerTab({ data, pushUndo, handleUndo, undoStack, showToast }) {
     let totalSubsToday = subjectsToday.length;
     let presentToday = 0;
     let absentToday = 0;
-
+    
     if (data.attendance[selectedDate]) {
         subjectsToday.forEach(cls => {
             if (data.attendance[selectedDate][cls.subject] === 'P') presentToday++;
@@ -1520,48 +1461,48 @@ function TrackerTab({ data, pushUndo, handleUndo, undoStack, showToast }) {
 
     return (
         <div>
-            <ConfettiOverlay trigger={is100Percent} />
-            <div className="stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
-                <TiltCard className="stat-box" style={{ background: "#0f1623", border: "1px solid #1e293b", borderRadius: "12px", padding: "1.5rem" }}>
-                    <div className="stat-label">Total Today</div>
-                    <div className="stat-value"><AnimatedNumber value={totalSubsToday} /></div>
-                </TiltCard>
-                <TiltCard className="stat-box" style={{ background: "#0f1623", border: "1px solid #1e293b", borderRadius: "12px", padding: "1.5rem" }}>
-                    <div className="stat-label text-teal">Present</div>
-                    <div className="stat-value text-teal"><AnimatedNumber value={presentToday} /></div>
-                </TiltCard>
-                <TiltCard className="stat-box" style={{ background: "#0f1623", border: "1px solid #1e293b", borderRadius: "12px", padding: "1.5rem" }}>
-                    <div className="stat-label text-amber" style={{ gap: '0.2rem' }}><TrendingUp size={14} /> Streak</div>
-                    <div className="stat-value text-amber"><AnimatedNumber value={calculateStreak()} /> 🔥</div>
-                </TiltCard>
-            </div>
+           <ConfettiOverlay trigger={is100Percent} />
+           <div className="stat-grid">
+               <TiltCard className="stat-box">
+                   <div className="stat-label">Total Today</div>
+                   <div className="stat-value"><AnimatedNumber value={totalSubsToday} /></div>
+               </TiltCard>
+               <TiltCard className="stat-box">
+                   <div className="stat-label text-teal">Present</div>
+                   <div className="stat-value text-teal"><AnimatedNumber value={presentToday} /></div>
+               </TiltCard>
+               <TiltCard className="stat-box">
+                   <div className="stat-label text-amber" style={{gap: '0.2rem'}}><TrendingUp size={14}/> Streak</div>
+                   <div className="stat-value text-amber"><AnimatedNumber value={calculateStreak()} /> 🔥</div>
+               </TiltCard>
+           </div>
 
-            <div className="card" style={{ padding: '0' }}>
-                <div className="day-tabs" style={{ display: "flex", flexDirection: "row", overflowX: "auto", borderBottom: "1px solid #1e293b" }}>
+           <div className="card" style={{padding: '0'}}>
+                <div className="day-tabs">
                     {recentDays.map(rd => (
-                        <div key={rd.date}
+                        <div key={rd.date} 
                             className={`day-tab ${selectedDate === rd.date ? 'active' : ''}`}
                             onClick={() => setSelectedDate(rd.date)}
                         >
-                            {rd.date === todayStr ? 'TODAY' : rd.dayName} <br />
-                            <span style={{ fontSize: '0.7rem', fontWeight: 'normal' }}>{rd.date.slice(5)}</span>
+                            {rd.date === todayStr ? 'TODAY' : rd.dayName} <br/>
+                            <span style={{fontSize:'0.7rem', fontWeight:'normal'}}>{rd.date.slice(5)}</span>
                         </div>
                     ))}
                 </div>
 
-                <div style={{ padding: '0 1.5rem 1.5rem 1.5rem' }}>
+                <div style={{padding: '0 1.5rem 1.5rem 1.5rem'}}>
                     <div className="flex-between mb-2">
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <div style={{display:'flex', gap:'0.5rem'}}>
                             <button className="btn btn-primary" onClick={markAllPresent} disabled={subjectsToday.length === 0}>✓ ALL PRESENT</button>
                             <button className="btn btn-outline" onClick={clearDay} disabled={subjectsToday.length === 0}>CLEAR</button>
                         </div>
                         <button className="btn btn-outline" onClick={handleUndo} disabled={undoStack.length === 0}>
-                            <RotateCcw size={16} /> UNDO ({undoStack.length})
+                            <RotateCcw size={16}/> UNDO ({undoStack.length})
                         </button>
                     </div>
 
                     {subjectsToday.length === 0 ? (
-                        <div className="text-center text-muted py-2" style={{ padding: '3rem 0' }}>
+                        <div className="text-center text-muted py-2" style={{padding: '3rem 0'}}>
                             No subjects scheduled for {selectedDayOfWeek}.
                         </div>
                     ) : (
@@ -1578,8 +1519,8 @@ function TrackerTab({ data, pushUndo, handleUndo, undoStack, showToast }) {
                                 return (
                                     <div key={cls.id} className="subject-row">
                                         <div>
-                                            <div className="text-teal" style={{ fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.2rem' }}>{cls.start} - {endStr}</div>
-                                            <div className="heading-font" style={{ fontSize: '1.1rem' }}>{cls.subject}</div>
+                                            <div className="text-teal" style={{fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.2rem'}}>{cls.start} - {endStr}</div>
+                                            <div className="heading-font" style={{fontSize:'1.1rem'}}>{cls.subject}</div>
                                         </div>
                                         <div className="status-group">
                                             <RippleButton className={`status-btn ${status === 'P' ? 'selected-P' : ''}`} onClick={() => markSingle(cls.subject, 'P')}>P</RippleButton>
@@ -1592,26 +1533,26 @@ function TrackerTab({ data, pushUndo, handleUndo, undoStack, showToast }) {
                         </div>
                     )}
                 </div>
-            </div>
+           </div>
 
-            {subjectsToday.length > 0 && todayPie.length > 0 && todayPie[0].name !== 'Unmarked' && (
-                <TiltCard className="card flex-between" style={{ gap: '2rem' }}>
-                    <div style={{ flex: 1 }}>
+           {subjectsToday.length > 0 && todayPie.length > 0 && todayPie[0].name !== 'Unmarked' && (
+               <TiltCard className="card flex-between" style={{gap: '2rem'}}>
+                   <div style={{flex: 1}}>
                         <h3 className="heading-font mb-1">TODAY'S BREAKDOWN</h3>
                         <p className="text-muted">Visual summary of your marked attendance for {selectedDate}.</p>
-                    </div>
-                    <div style={{ width: 150, height: 150 }}>
+                   </div>
+                   <div style={{width: 150, height: 150}}>
                         <ResponsiveContainer>
                             <PieChart>
                                 <Pie data={todayPie} dataKey="value" innerRadius={40} outerRadius={60} stroke="none">
                                     {todayPie.map((entry, index) => <Cell key={index} fill={entry.color} />)}
                                 </Pie>
-                                <RechartsTooltip contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', fontFamily: 'var(--font-mono)' }} />
+                                <RechartsTooltip contentStyle={{background: 'var(--card)', border: '1px solid var(--border)', fontFamily: 'var(--font-mono)'}} />
                             </PieChart>
                         </ResponsiveContainer>
-                    </div>
-                </TiltCard>
-            )}
+                   </div>
+               </TiltCard>
+           )}
         </div>
     );
 }
@@ -1630,11 +1571,11 @@ function AnalyticsTab({ data }) {
 
     dates.forEach(d => {
         Object.entries(data.attendance[d]).forEach(([sub, status]) => {
-            if (subStats[sub]) {
+            if(subStats[sub]) {
                 subStats[sub][status]++;
                 subStats[sub].total++;
                 totalClasses++;
-                if (status === 'P' || status === 'L') totalPresent++; // Treat Late as present for %? Let's say P is present. 
+                if(status === 'P' || status === 'L') totalPresent++; // Treat Late as present for %? Let's say P is present. 
                 // Wait, typically L is counted as half or just let's log them separately.
             }
         });
@@ -1645,7 +1586,7 @@ function AnalyticsTab({ data }) {
     // Heatmap Data (Last 30 Days)
     const heatmapDays = [];
     const _d = new Date();
-    for (let i = 29; i >= 0; i--) {
+    for(let i=29; i>=0; i--) {
         const d2 = new Date();
         d2.setDate(_d.getDate() - i);
         d2.setMinutes(d2.getMinutes() - d2.getTimezoneOffset());
@@ -1653,92 +1594,92 @@ function AnalyticsTab({ data }) {
         const dayRecord = data.attendance[dStr] || {};
         const values = Object.values(dayRecord);
         const dayTotal = values.length;
-        const dayP = values.filter(v => v === 'P').length;
+        const dayP = values.filter(v => v==='P').length;
         const perc = dayTotal === 0 ? null : (dayP / dayTotal);
-
+        
         let colorClass = 'cell-grey';
         if (perc !== null) {
             if (perc >= 0.75) colorClass = 'cell-green';
             else if (perc >= 0.5) colorClass = 'cell-yellow';
             else colorClass = 'cell-red';
         }
-        heatmapDays.push({ date: dStr, perc: perc !== null ? Math.round(perc * 100) : '-', colorClass });
+        heatmapDays.push({ date: dStr, perc: perc !== null ? Math.round(perc*100) : '-', colorClass });
     }
 
     // Chart Data (Last 7 Days Bar)
     const chartData = getLast7Days().reverse().map(d => {
         const rec = data.attendance[d] || {};
-        const P = Object.values(rec).filter(v => v === 'P').length;
-        const A = Object.values(rec).filter(v => v === 'A').length;
-        const L = Object.values(rec).filter(v => v === 'L').length;
+        const P = Object.values(rec).filter(v=>v==='P').length;
+        const A = Object.values(rec).filter(v=>v==='A').length;
+        const L = Object.values(rec).filter(v=>v==='L').length;
         return { name: d.slice(5), Present: P, Absent: A, Late: L };
     });
 
     return (
         <div>
-            <div className="stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "1rem", marginBottom: "1.5rem" }}>
-                <TiltCard className="stat-box" style={{ background: "#0f1623", border: "1px solid #1e293b", borderRadius: "12px", padding: "1.5rem" }}>
+            <div className="stat-grid">
+                <TiltCard className="stat-box">
                     <div className="stat-label">Overall %</div>
-                    <div className="stat-value" style={{ color: overallPerc >= 75 ? 'var(--teal)' : 'var(--red)' }}>
+                    <div className="stat-value" style={{color: overallPerc >= 75 ? 'var(--teal)' : 'var(--red)'}}>
                         <AnimatedNumber value={overallPerc} />%
                     </div>
                 </TiltCard>
-                <TiltCard className="stat-box" style={{ background: "#0f1623", border: "1px solid #1e293b", borderRadius: "12px", padding: "1.5rem" }}>
+                <TiltCard className="stat-box">
                     <div className="stat-label">Days Tracked</div>
                     <div className="stat-value"><AnimatedNumber value={dates.length} /></div>
                 </TiltCard>
-                <TiltCard className="stat-box" style={{ background: "#0f1623", border: "1px solid #1e293b", borderRadius: "12px", padding: "1.5rem" }}>
+                <TiltCard className="stat-box">
                     <div className="stat-label">Subjects</div>
                     <div className="stat-value"><AnimatedNumber value={data.subjects.length} /></div>
                 </TiltCard>
             </div>
 
             <CalendarHeatmap dailyLog={data.dailyLog || data.attendance} />
-
+            
             <RiskMeter perc={overallPerc} />
 
             <TiltCard className="card">
                 <h3 className="heading-font mb-2">WEEKLY TREND (LAST 7 DAYS)</h3>
-                <div style={{ height: 200, width: '100%', marginBottom: '2rem' }}>
+                <div style={{height: 200, width: '100%', marginBottom: '2rem'}}>
                     <ResponsiveContainer>
                         <BarChart data={chartData}>
                             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                             <XAxis dataKey="name" stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} />
                             <YAxis stroke="var(--text-muted)" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
-                            <RechartsTooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--text-main)' }} />
-                            <Bar dataKey="Present" stackId="a" fill="var(--teal)" radius={[0, 0, 0, 0]} />
-                            <Bar dataKey="Late" stackId="a" fill="var(--amber)" radius={[0, 0, 0, 0]} />
-                            <Bar dataKey="Absent" stackId="a" fill="var(--red)" radius={[4, 4, 0, 0]} />
+                            <RechartsTooltip cursor={{fill: 'rgba(255,255,255,0.05)'}} contentStyle={{background: 'var(--card)', border: '1px solid var(--border)', color: 'var(--text-main)'}} />
+                            <Bar dataKey="Present" stackId="a" fill="var(--teal)" radius={[0,0,0,0]} />
+                            <Bar dataKey="Late" stackId="a" fill="var(--amber)" radius={[0,0,0,0]} />
+                            <Bar dataKey="Absent" stackId="a" fill="var(--red)" radius={[4,4,0,0]} />
                         </BarChart>
                     </ResponsiveContainer>
                 </div>
             </TiltCard>
 
-            <h2 className="heading-font mb-2" style={{ marginTop: '3rem' }}>SUBJECT BREAKDOWN</h2>
+            <h2 className="heading-font mb-2" style={{marginTop:'3rem'}}>SUBJECT BREAKDOWN</h2>
             {data.subjects.map(sub => {
                 const stats = subStats[sub];
                 if (stats.total === 0) return null;
                 const perc = Math.round((stats.P / stats.total) * 100);
-
+                
                 let banner = null;
                 if (perc >= 75) {
                     const allowedAbsences = Math.floor(stats.P / 0.75) - stats.total;
-                    banner = <div className="banner banner-green"><CheckCircle size={16} /> Safe at {perc}%. Can miss {Math.max(0, allowedAbsences)} classes.</div>;
+                    banner = <div className="banner banner-green"><CheckCircle size={16}/> Safe at {perc}%. Can miss {Math.max(0, allowedAbsences)} classes.</div>;
                 } else if (perc >= 50) {
                     const needed = Math.ceil(((0.75 * stats.total) - stats.P) / 0.25);
-                    banner = <div className="banner banner-red"><AlertCircle size={16} /> Below 75%. Attend {needed} more classes to fix.</div>;
+                    banner = <div className="banner banner-red"><AlertCircle size={16}/> Below 75%. Attend {needed} more classes to fix.</div>;
                 } else {
                     const needed = Math.ceil(((0.75 * stats.total) - stats.P) / 0.25);
-                    banner = <div className="banner banner-red"><AlertCircle size={16} /> Critical below 75%. Attend {needed} more classes to fix.</div>;
+                    banner = <div className="banner banner-red"><AlertCircle size={16}/> Critical below 75%. Attend {needed} more classes to fix.</div>;
                 }
 
                 return (
-                    <TiltCard key={sub} className="card flex-between" style={{ alignItems: 'center', gap: '1.5rem' }}>
-                        <div style={{ flex: 1 }}>
-                            <div className="progress-header" style={{ alignItems: 'center' }}>
-                                <span className="text-teal" style={{ fontSize: '1.2rem' }}>{sub}</span>
+                    <TiltCard key={sub} className="card flex-between" style={{alignItems: 'center', gap: '1.5rem'}}>
+                        <div style={{flex: 1}}>
+                            <div className="progress-header" style={{alignItems: 'center'}}>
+                                <span className="text-teal" style={{fontSize: '1.2rem'}}>{sub}</span>
                             </div>
-                            <div className="text-muted" style={{ fontSize: '0.85rem', marginBottom: '0.5rem' }}>
+                            <div className="text-muted" style={{fontSize:'0.85rem', marginBottom:'0.5rem'}}>
                                 {stats.P} Present · {stats.A} Absent · {stats.L} Late · {stats.total} Total
                             </div>
                             {banner}
@@ -1750,3 +1691,4 @@ function AnalyticsTab({ data }) {
         </div>
     );
 }
+
