@@ -159,10 +159,7 @@ const injectStyles = () => {
     .checkbox-label.checked { border-color: var(--teal); color: var(--teal); }
     /* STAT GRID - tracker + analytics ke cards */
     .stat-grid { display: grid !important; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important; gap: 1rem !important; margin-bottom: 1.5rem !important; }
-    .stat-grid > * { min-width: 0; }
     .stat-box { background: var(--card) !important; border: 1px solid var(--border) !important; border-radius: 12px !important; padding: 1.5rem !important; position: relative !important; overflow: hidden !important; }
-    .tilt-card.stat-box { display: block !important; }
-    .tilt-card.stat-box .tilt-content { display: block !important; height: 100% !important; }
     .stat-label { font-size: 0.7rem !important; color: var(--text-muted) !important; letter-spacing: 2px !important; text-transform: uppercase !important; margin-bottom: 0.5rem !important; display: flex !important; align-items: center !important; gap: 0.3rem !important; }
     .stat-value { font-family: var(--font-heading) !important; font-size: 2rem !important; font-weight: 800 !important; line-height: 1.1 !important; }
 
@@ -175,7 +172,7 @@ const injectStyles = () => {
     /* DAY TABS - tracker horizontal tabs - THE MAIN FIX */
     .day-tabs { display: flex !important; flex-direction: row !important; overflow-x: auto !important; border-bottom: 1px solid var(--border) !important; scrollbar-width: none !important; padding: 0 !important; margin: 0 !important; }
     .day-tabs::-webkit-scrollbar { display: none !important; }
-    .day-tab { display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; padding: 1rem 1.2rem !important; cursor: pointer !important; font-family: var(--font-mono) !important; font-size: 0.8rem !important; color: var(--text-muted) !important; border-bottom: 2px solid transparent !important; white-space: nowrap !important; text-align: center !important; transition: all 0.2s !important; flex-shrink: 0 !important; user-select: none !important; }
+    .day-tab { display: block !important; padding: 1rem 1.2rem !important; cursor: pointer !important; font-family: var(--font-mono) !important; font-size: 0.8rem !important; color: var(--text-muted) !important; border-bottom: 2px solid transparent !important; white-space: nowrap !important; text-align: center !important; transition: all 0.2s !important; flex-shrink: 0 !important; user-select: none !important; }
     .day-tab:hover { color: var(--text-main) !important; background: rgba(255,255,255,0.02) !important; }
     .day-tab.active { color: var(--teal) !important; border-bottom-color: var(--teal) !important; }
 
@@ -1001,7 +998,12 @@ export default function App() {
           // If no row, create one
           await supabase.from('attendance_data').insert([{
             user_id: user.id,
-            ...DEFAULT_DATA,
+            subjects: [],
+            timetable: DEFAULT_DATA.timetable,
+            attendance: {},
+            daily_log: {},
+            phase: 'setup',
+            lecture_settings: { durationMinutes: 60 },
             updated_at: new Date().toISOString()
           }]);
           setData(DEFAULT_DATA);
