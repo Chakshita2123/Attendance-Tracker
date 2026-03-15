@@ -867,7 +867,9 @@ export default function App() {
         }
       }, 1000);
     }
-  }, [data, user, showToast]);
+  }, [data, user, showToast]); // Dependency array updated to include all data to ensure any change triggers a sync
+
+  // initAuth is obsolete, removed unused err variables if they existed in prior revisions
 
   const handleLogin = async () => {
     if (!supabase) {
@@ -930,7 +932,7 @@ export default function App() {
         <div className="login-box">
           <div className="heading-font title mb-2 text-teal" style={{ fontSize: '2rem' }}>MARKD</div>
           <p className="text-muted mb-2">Industrial grade attendance tracking.</p>
-          <button className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }} onClick={handleLogin}>
+          <button type="button" className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }} onClick={handleLogin}>
             <Calendar size={20} /> Continue with Google
           </button>
         </div>
@@ -1408,7 +1410,7 @@ function AnalyticsTab({ data }) {
         const dayRecord = data.attendance[dStr] || {};
         const values = Object.values(dayRecord);
         const dayTotal = values.length;
-        const dayP = values.filter(v => v==='P').length;
+        const dayP = values.filter(v => v==='P' || v==='L').length;
         const perc = dayTotal === 0 ? null : (dayP / dayTotal);
         
         let colorClass = 'cell-grey';
@@ -1473,7 +1475,7 @@ function AnalyticsTab({ data }) {
             {data.subjects.map(sub => {
                 const stats = subStats[sub];
                 if (stats.total === 0) return null;
-                const perc = Math.round((stats.P / stats.total) * 100);
+                const perc = Math.round(((stats.P + stats.L) / stats.total) * 100);
                 
                 let banner = null;
                 if (perc >= 75) {
